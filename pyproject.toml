@@ -1,0 +1,32 @@
+[project]
+name = "uptime-monitor"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi[standard]>=0.148.0",
+    "pydantic-settings>=2.16.0",
+    "python-dotenv>=1.2.4",
+]
+
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "ruff>=0.17.1",
+]
+
+[tool.fastapi]
+entrypoint = "app.main:app"
+
+[tool.ruff.lint]
+extend-select = [
+    "FAST",      # FastAPI signatures and redundant response models
+    "ASYNC210",  # Blocking HTTP calls in async functions
+    "ASYNC212",  # Blocking HTTPX calls in async functions
+    "ASYNC230",  # Blocking file opens in async functions
+    "ASYNC251",  # time.sleep in async functions
+    "B",         # Bugbear, including calls in argument defaults
+    "I",         # Import sorting
+]
