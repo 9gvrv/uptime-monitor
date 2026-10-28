@@ -26,7 +26,6 @@ def create_app():
             "message": {
                 "app": settings.APP_NAME,
                 "version": settings.APP_VERSION,
-                "db_url": settings.DATABASE_URL,
             }
         }
 

@@ -1,6 +1,6 @@
-from fastapi import APIRouter, status
-from fastapi.exceptions import HTTPException
-from fastapi.param_functions import Depends
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio.session import AsyncSession
@@ -16,7 +16,9 @@ async def health():
 
 
 @router.get("/health/ready")
-async def readiness_check(session: AsyncSession = Depends(get_db)):
+async def readiness_check(
+    session: Annotated[AsyncSession, Depends(get_db)],
+):
     try:
         await session.execute(text("SELECT 1"))
 
