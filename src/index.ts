@@ -1,28 +1,35 @@
 import { serve } from '@hono/node-server'
 import { Hono } from 'hono'
-import config from '@/config.js'
-import {logger} from '@/lib/logger.js'
+import config from './config.js'
+import { logger } from './lib/logger.js'
 
-
-export function create_app() {
+export function createApp() {
   const app = new Hono()
 
   app.get('/', (c) => {
-    logger.info("Hello, World");
-    return c.json({ message: `${config.database_url}` })
+    logger.info('root endpoint')
+    return c.json({
+      message: {
+        app: config.app_name,
+        version: config.app_version,
+      },
+    })
   })
 
-  return app;
+  return app
 }
 
-const app = create_app()
+const app = createApp()
 
-const server = serve({
-  fetch: app.fetch,
-  port: 3000
-}, (info) => {
-  console.log(`Server is running on http://localhost:${info.port}`)
-})
+const server = serve(
+  {
+    fetch: app.fetch,
+    port: config.port,
+  },
+  (info) => {
+    logger.info(`Server is running on http://localhost:${info.port}`)
+  },
+)
 
 // graceful shutdown
 process.on('SIGINT', () => {
@@ -32,7 +39,7 @@ process.on('SIGINT', () => {
 process.on('SIGTERM', () => {
   server.close((err) => {
     if (err) {
-      console.error(err)
+      logger.error(err)
       process.exit(1)
     }
     process.exit(0)
