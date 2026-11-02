@@ -2,19 +2,13 @@ import { serve } from '@hono/node-server'
 import { Hono } from 'hono'
 import config from './config.js'
 import { logger } from './lib/logger.js'
+import router from './api/router.js'
+import healthRouter from './api/health.js'
 
 export function createApp() {
   const app = new Hono()
-
-  app.get('/', (c) => {
-    logger.info('root endpoint')
-    return c.json({
-      message: {
-        app: config.app_name,
-        version: config.app_version,
-      },
-    })
-  })
+  app.route("/", healthRouter);
+  app.route("/api", router);
 
   return app
 }
