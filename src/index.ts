@@ -2,16 +2,7 @@ import { serve } from '@hono/node-server'
 import { Hono } from 'hono'
 import config from './config.js'
 import { logger } from './lib/logger.js'
-import router from './api/router.js'
-import healthRouter from './api/health.js'
-
-export function createApp() {
-  const app = new Hono()
-  app.route("/", healthRouter);
-  app.route("/api", router);
-
-  return app
-}
+import createApp from './app.js'
 
 const app = createApp()
 
@@ -39,3 +30,5 @@ process.on('SIGTERM', () => {
     process.exit(0)
   })
 })
+
+export default app;
