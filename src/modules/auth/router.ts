@@ -3,7 +3,8 @@ import { signupSchema, signupReturnSchema, loginSchema, loginReturnSchema } from
 import { ApiError } from "../../lib/apiError.js";
 import { ApiResponse } from "../../lib/apiResponse.js";
 import { hashPassword, comparePassword, generateToken } from "./security.js";
-import db from "../../db/connection.js";
+import { getDb } from "../../db/connection.js";
+import { getConfig } from "../../config.js";
 import { users } from "../users/schema.js";
 import { eq } from "drizzle-orm";
 import { readJson } from "../../lib/readJson.js";
@@ -14,6 +15,8 @@ import { logger } from "../../lib/logger.js";
 const router = new Hono<AppEnv>().basePath("/auth");
 
 router.post("/signup", async (c) => {
+  const db = getDb(getConfig(c.env).database_url);
+
   // readJson itself throws a 400 ApiError on a malformed body.
   const body = await readJson(c);
 
@@ -85,6 +88,8 @@ router.post("/signup", async (c) => {
 });
 
 router.post("/login", async (c) => {
+  const db = getDb(getConfig(c.env).database_url);
+
   const body = await readJson(c);
 
   const parsed = loginSchema.safeParse(body);
@@ -120,7 +125,7 @@ router.post("/login", async (c) => {
     });
   }
 
-  const token = await generateToken(user);
+  const token = await generateToken(user, getConfig(c.env).jwt_secret);
 
   // loginReturnSchema was written for { email, token }; strip the rest of the
   // row (passwordHash, timestamps) explicitly instead of spreading the user.
@@ -145,6 +150,7 @@ router.post("/login", async (c) => {
 
 /** GET /api/v1/auth/me — returns the currently authenticated user. */
 router.get("/me", requireAuth, async (c) => {
+  const db = getDb(getConfig(c.env).database_url);
   const { id } = c.get("user");
 
   const [user] = await withRetry(() =>

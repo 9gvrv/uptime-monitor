@@ -2,17 +2,20 @@ import { describe, test, expect, vi, beforeEach } from "vitest";
 
 // db is mocked BEFORE any import of the app — vi.mock is hoisted above imports.
 // Every test is deterministic: no network, no real data, reproducible forever.
+const db = {
+  select: vi.fn(),
+  insert: vi.fn(),
+};
+
 vi.mock("../src/db/connection.js", () => ({
-  default: {
-    select: vi.fn(),
-    insert: vi.fn(),
-  },
+  getDb: vi.fn(),
+  default: vi.fn(),
 }));
 
-// bcrypt is mocked so password checks are instant and completely controlled.
+// bcryptjs is mocked so password checks are instant and completely controlled.
 // JWT signing stays REAL (hono/jwt is not mocked) so /me tests exercise the
 // actual sign/verify round trip.
-vi.mock("bcrypt", () => ({
+vi.mock("bcryptjs", () => ({
   default: {
     hash: vi.fn(),
     compare: vi.fn(),
@@ -20,9 +23,10 @@ vi.mock("bcrypt", () => ({
 }));
 
 import create_app from "../src/app.js";
-import db from "../src/db/connection.js";
-import bcrypt from "bcrypt";
+import { getDb } from "../src/db/connection.js";
+import bcrypt from "bcryptjs";
 import { generateToken } from "../src/modules/auth/security.js";
+import { TEST_ENV } from "./env.js";
 
 const app = create_app();
 
@@ -68,22 +72,25 @@ const decodeJwtPayload = (token: string) => {
   };
 };
 
+const request = (path: string, init?: RequestInit) =>
+  app.request(path, init, TEST_ENV);
+
 const signupRequest = (body: unknown) =>
-  app.request("/api/v1/auth/signup", {
+  request("/api/v1/auth/signup", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
 
 const loginRequest = (body: unknown) =>
-  app.request("/api/v1/auth/login", {
+  request("/api/v1/auth/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
 
 const meRequest = (token: string | null) =>
-  app.request("/api/v1/auth/me", {
+  request("/api/v1/auth/me", {
     method: "GET",
     headers: token === null ? {} : { Authorization: `Bearer ${token}` },
   });
@@ -93,6 +100,9 @@ const EMAIL = "test1@gmail.com";
 beforeEach(() => {
   // Wipe call history AND implementations so no test sees stale state.
   vi.resetAllMocks();
+  // The app asks the connection module for a client per request; hand it the
+  // deterministic mock above.
+  vi.mocked(getDb).mockReturnValue(db as any);
 });
 
 describe("POST /api/v1/auth/signup", () => {
@@ -168,7 +178,7 @@ describe("POST /api/v1/auth/signup", () => {
   });
 
   test("rejects a malformed JSON body (400, not 500)", async () => {
-    const res = await app.request("/api/v1/auth/signup", {
+    const res = await request("/api/v1/auth/signup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: "{not-json",
@@ -230,7 +240,7 @@ describe("POST /api/v1/auth/login", () => {
 
 describe("GET /api/v1/auth/me", () => {
   test("returns the authenticated user for a valid token (200)", async () => {
-    const token = await generateToken({ id: 1, email: EMAIL });
+    const token = await generateToken({ id: 1, email: EMAIL }, TEST_ENV.JWT_SECRET!);
     mockSelect([DB_USER_FOR(EMAIL)]);
 
     const res = await meRequest(token);
@@ -269,7 +279,7 @@ describe("GET /api/v1/auth/me", () => {
   });
 
   test("returns 404 when the token is valid but the user was deleted", async () => {
-    const token = await generateToken({ id: 42, email: EMAIL });
+    const token = await generateToken({ id: 42, email: EMAIL }, TEST_ENV.JWT_SECRET!);
     mockSelect([]); // row gone between issue time and verification
 
     const res = await meRequest(token);

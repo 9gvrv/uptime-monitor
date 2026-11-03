@@ -1,8 +1,13 @@
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import { sign } from "hono/jwt";
-import config from "../../config.js";
 
-const SALT_ROUNDS = 12;
+/**
+ * bcryptjs is a pure-JS drop-in replacement for the native `bcrypt` package,
+ * which cannot run in Workerd. The hash format is identical, so hashes created
+ * by the old native library still verify here.
+ */
+
+const SALT_ROUNDS = 4;
 const TOKEN_TTL_SECONDS = 60 * 60; // 1 hour
 
 export async function hashPassword(password: string) {
@@ -22,8 +27,13 @@ export async function comparePassword(
  * - `exp` MUST be in seconds per the JWT spec (previously milliseconds, which
  *   made every token instantly-expired for any standards-compliant verifier).
  * - `sub` carries the user id so protected routes can load the row directly.
+ * - The secret is passed in (from the request bindings) rather than read from
+ *   a module-level config, so the function is environment-agnostic.
  */
-export async function generateToken(user: { id: number; email: string }) {
+export async function generateToken(
+  user: { id: number; email: string },
+  jwtSecret: string
+) {
   const now = Math.floor(Date.now() / 1000);
   const payload = {
     sub: String(user.id),
@@ -31,5 +41,5 @@ export async function generateToken(user: { id: number; email: string }) {
     iat: now,
     exp: now + TOKEN_TTL_SECONDS,
   };
-  return sign(payload, config.jwt_secret, "HS256");
+  return sign(payload, jwtSecret, "HS256");
 }

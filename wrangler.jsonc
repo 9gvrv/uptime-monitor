@@ -1,0 +1,32 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "uptime-monitor",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-11-01",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // Declared so `wrangler dev` warns when a local `.dev.vars` is missing them,
+  // and so generated types include them. Values are set with
+  // `wrangler secret put <NAME>` — never committed here.
+  "secrets": {
+    "required": ["DATABASE_URL", "JWT_SECRET"]
+  },
+
+  // Structured logs are visible in `wrangler tail` and the dashboard.
+  "observability": {
+    "enabled": true
+  },
+
+  // Non-secret configuration. Secrets (DATABASE_URL, JWT_SECRET) are set with
+  // `wrangler secret put <NAME>` and are NOT stored in this file.
+  "vars": {
+    "APP_NAME": "uptime-monitor",
+    "APP_VERSION": "1.0.0",
+    "NODE_ENV": "production",
+    "LOG_LEVEL": "info"
+  },
+
+  "dev": {
+    "port": 8787
+  }
+}

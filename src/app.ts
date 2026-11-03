@@ -5,17 +5,28 @@ import { cors } from "hono/cors"
 import { secureHeaders } from "hono/secure-headers";
 import { requestId } from "hono/request-id";
 import { ApiError } from "./lib/apiError.js";
-import { logger } from "./lib/logger.js";
+import { logger, setLogLevel } from "./lib/logger.js";
+import { getConfig } from "./config.js";
+import type { AppEnv } from "./middleware/auth.js";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 
 /**
  * Creates the Hono app instance with middleware and routes.
  *
- * @returns Configured Hono application instance.
+ * The app is runtime-agnostic: it reads configuration from `c.env` bindings,
+ * so the exact same instance is served by `@hono/node-server` in development
+ * and by the Cloudflare Worker entry point (`src/worker.ts`) in production.
  */
-
 const createApp = () => {
-  const app = new Hono()
+  const app = new Hono<AppEnv>()
+
+  // Validate the bindings on the first request and fail with a clear error
+  // (instead of a confusing downstream failure) if anything is missing.
+  app.use("*", async (c, next) => {
+    const config = getConfig(c.env)
+    setLogLevel(config.log_level)
+    await next()
+  })
 
   // Middlewares
   app.use("*", secureHeaders())

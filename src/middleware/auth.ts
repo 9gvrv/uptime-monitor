@@ -1,6 +1,6 @@
 import type { MiddlewareHandler } from "hono";
 import { verify } from "hono/jwt";
-import config from "../config.js";
+import { getConfig, type Bindings } from "../config.js";
 import { ApiError } from "../lib/apiError.js";
 
 /** The authenticated principal injected into the Hono context. */
@@ -9,8 +9,15 @@ export type AuthUser = {
   email: string;
 };
 
-/** Hono environmentBindings that make `c.get("user")` type-safe. */
+/**
+ * Hono environment used across the app.
+ *
+ * - `Bindings` are the runtime env values (`c.env`): vars and secrets on
+ *   Workers, `process.env` on the Node dev server.
+ * - `Variables` make `c.get("user")` type-safe.
+ */
 export type AppEnv = {
+  Bindings: Bindings;
   Variables: { user: AuthUser };
 };
 
@@ -18,6 +25,9 @@ export type AppEnv = {
  * Verifies the JWT from the `Authorization: Bearer <token>` header and stores
  * the decoded user in the context. Throws 401 ApiErrors for missing, malformed,
  * expired, or invalid tokens — never a raw error, so onError can format it.
+ *
+ * The secret is read from the request bindings (Workers) instead of a
+ * module-level config so the same code works in every environment.
  */
 export const requireAuth: MiddlewareHandler<AppEnv> = async (c, next) => {
   const header = c.req.header("Authorization");
@@ -34,7 +44,7 @@ export const requireAuth: MiddlewareHandler<AppEnv> = async (c, next) => {
   }
 
   try {
-    const payload = await verify(token, config.jwt_secret, "HS256");
+    const payload = await verify(token, getConfig(c.env).jwt_secret, "HS256");
     c.set("user", {
       id: Number(payload.sub),
       email: String(payload.email ?? ""),
