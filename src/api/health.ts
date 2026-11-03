@@ -3,6 +3,7 @@ import { logger } from "../lib/logger.js";
 import config from "../config.js";
 import db from "../db/connection.js";
 import { sql } from "drizzle-orm";
+import { withRetry } from "../db/dbUtils.js";
 
 const router = new Hono()
 
@@ -19,7 +20,8 @@ router.get("/", (c) => {
 router.get("/health", async (c) => {
   logger.info('health endpoint')
   try {
-    await db.execute(sql`SELECT 1`);
+    // Retried so a single transient Neon/network blip doesn't flap the probe.
+    await withRetry(() => db.execute(sql`SELECT 1`));
     return c.json({ message: "OK" });
   } catch (error) {
     logger.error(error);
