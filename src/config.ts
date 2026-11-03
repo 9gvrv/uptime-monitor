@@ -10,6 +10,7 @@ const configSchema = z.object({
   log_level: z
     .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace'])
     .default('info'),
+  jwt_secret: z.string().min(1),
 })
 
 const parsed = configSchema.safeParse({
@@ -19,6 +20,7 @@ const parsed = configSchema.safeParse({
   port: process.env.PORT,
   node_env: process.env.NODE_ENV,
   log_level: process.env.LOG_LEVEL,
+  jwt_secret: process.env.JWT_SECRET,
 })
 
 if (!parsed.success) {
