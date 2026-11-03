@@ -7,6 +7,13 @@ dns.setDefaultResultOrder('ipv4first')
 import 'dotenv/config'
 import { drizzle } from 'drizzle-orm/neon-http'
 import { migrate } from 'drizzle-orm/neon-http/migrator'
+import { errorText, isRetryable } from './dbUtils.js'
+
+/**
+ * Migration runner for `pnpm db:migrate`. Not part of the running server —
+ * applies the SQL in ./drizzle to Neon, wrapped in a retry loop because the
+ * serverless driver is exposed to the same transient network failures as the app.
+ */
 
 const databaseUrl = getDatabaseUrl()
 
@@ -20,18 +27,6 @@ function getDatabaseUrl(): string {
 }
 
 const MAX_ATTEMPTS = 5
-const RETRYABLE =
-  /ETIMEDOUT|ECONNRESET|ECONNREFUSED|ENOTFOUND|EAI_AGAIN|fetch failed|socket hang up/i
-
-function errorText(error: unknown): string {
-  if (!(error instanceof Error)) return String(error)
-  const cause = error.cause
-  const causeText =
-    cause instanceof Error
-      ? `${cause.message} ${(cause as { code?: string }).code ?? ''}`
-      : String(cause ?? '')
-  return `${error.message} ${causeText}`
-}
 
 async function main() {
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
@@ -47,7 +42,7 @@ async function main() {
       return
     } catch (error) {
       const text = errorText(error)
-      const canRetry = attempt < MAX_ATTEMPTS && RETRYABLE.test(text)
+      const canRetry = attempt < MAX_ATTEMPTS && isRetryable(error)
 
       if (!canRetry) {
         console.error(`Migration failed: ${text}`)
