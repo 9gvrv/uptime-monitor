@@ -1,0 +1,317 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "b7b44ce0-68f7-444b-b003-1886ecb23d72",
+  "prevIds": [
+    "8e01e9cb-8381-42c0-bc71-502af7fcb2b9"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "health_checks"
+      ],
+      "writes": [
+        "s|tbl|public.health_checks",
+        "n|tbl|public.health_checks",
+        "e|tbl|public.health_checks",
+        "n|rel|public.health_checks",
+        "n|type|public.health_checks",
+        "n|rel|public.health_checks_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "monitors",
+        "is_active"
+      ],
+      "writes": [
+        "s|col|public.monitors.is_active",
+        "n|col|public.monitors.is_active",
+        "e|col|public.monitors.is_active"
+      ],
+      "reads": [
+        "n|tbl|public.monitors",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "drop_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "monitors",
+        "timeout_seconds"
+      ],
+      "writes": [
+        "s|col|public.monitors.timeout_seconds",
+        "n|col|public.monitors.timeout_seconds",
+        "e|col|public.monitors.timeout_seconds"
+      ],
+      "reads": [
+        "n|tbl|public.monitors",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "health_checks",
+        "ix_health_checks_monitor_id"
+      ],
+      "writes": [
+        "s|idx|public.ix_health_checks_monitor_id",
+        "n|idx|public.ix_health_checks_monitor_id",
+        "e|idx|public.ix_health_checks_monitor_id",
+        "n|rel|public.ix_health_checks_monitor_id"
+      ],
+      "reads": [
+        "n|tbl|public.health_checks",
+        "n|sch|public",
+        "n|col|public.health_checks.monitor_id",
+        "n|col|public.health_checks.checked_at"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "health_checks"
+      ],
+      "writes": [
+        "s|fk|public.health_checks.health_checks_monitor_id_monitors_id_fkey",
+        "n|fk|public.health_checks.health_checks_monitor_id_monitors_id_fkey",
+        "e|fk|public.health_checks.health_checks_monitor_id_monitors_id_fkey",
+        "n|con|public.health_checks.health_checks_monitor_id_monitors_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.health_checks",
+        "n|sch|public",
+        "n|tbl|public.monitors",
+        "n|sch|public",
+        "n|col|public.health_checks.monitor_id",
+        "n|col|public.monitors.id",
+        "e|uniqueness|public.monitors.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "health_checks",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "health_checks",
+        "name": "id",
+        "type": "serial",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "health_checks",
+        "name": "monitor_id",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "health_checks",
+        "name": "status_code",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "health_checks",
+        "name": "latency_ms",
+        "type": "double precision",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "health_checks",
+        "name": "is_up",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "health_checks",
+        "name": "error_message",
+        "type": "varchar(2048)",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "health_checks",
+        "name": "checked_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "monitors",
+        "name": "is_active",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "true",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "health_checks",
+        "name": "ix_health_checks_monitor_id",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "monitor_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "checked_at",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "health_checks",
+        "name": "health_checks_monitor_id_monitors_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "monitor_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "monitors",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "health_checks",
+        "name": "health_checks_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"monitors\",\"timeout_seconds\"]"
+    }
+  ]
+}
