@@ -12,9 +12,11 @@
     "test": "vitest",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate.ts",
+    "db:migrate:prod": "tsx --env-file=.env.production src/db/migrate.ts",
     "db:migrate:kit": "drizzle-kit migrate",
     "db:pull": "drizzle-kit pull",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "db:studio:prod": "ENV_FILE=.env.production drizzle-kit studio"
   },
   "dependencies": {
     "@hono/node-server": "^2.1.3",

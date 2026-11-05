@@ -57,11 +57,19 @@ pnpm dev:worker                  # wrangler dev on http://localhost:8787
    pnpm wrangler secret put JWT_SECRET
    ```
 
-2. Apply database migrations (from your machine, against the production DB):
+2. Create a gitignored `.env.production` containing only the production
+   connection string, then apply migrations:
+
+   ```dotenv
+   DATABASE_URL='postgresql://...'
+   ```
 
    ```bash
-   DATABASE_URL="postgresql://..." pnpm db:migrate
+   pnpm db:migrate:prod
    ```
+
+   The command prints the target database host before applying anything, so
+   you can confirm it is the production branch.
 
 3. Deploy:
 
@@ -91,11 +99,46 @@ observability and can be streamed with `pnpm wrangler tail`.
 | `NODE_ENV`     | no       | `development` | `development` / `test` / `production` |
 | `LOG_LEVEL`    | no       | `info`        | `fatal` / `error` / `warn` / `info` / `debug` / `trace` / `silent` |
 
-- On Node these come from `.env` (loaded with `dotenv`).
+- On Node these come from `.env` (loaded with `dotenv`) for development.
+- Production ops (`db:migrate:prod`, `db:studio:prod`) load `.env.production`.
 - On Workers they come from `wrangler.jsonc` `vars` + secrets (and `.dev.vars`
   locally). The Node entry point validates config at startup and exits; the
   Worker validates on the first request and returns a 500 if anything is
   missing.
+
+## Environments and migrations
+
+Do not comment database URLs in and out of one file. Use one file per target:
+
+| File                | Used by                                                        | Contents |
+| ------------------- | -------------------------------------------------------------- | -------- |
+| `.env`              | `pnpm dev`, `pnpm db:migrate`, `pnpm db:studio`                | Development DB + app secrets |
+| `.env.production`   | `pnpm db:migrate:prod`, `pnpm db:studio:prod`                  | Production DB only (gitignored) |
+| `.dev.vars`         | `pnpm dev:worker`                                              | Local Worker bindings, pointing at the dev DB |
+| Cloudflare secrets  | the deployed Worker                                            | Production `DATABASE_URL` + `JWT_SECRET` |
+
+Typical flow after changing a schema:
+
+```bash
+pnpm db:generate      # write the SQL migration from src/modules/**/schema.ts
+pnpm db:migrate       # apply it to the development branch
+pnpm db:migrate:prod  # apply it to the production branch
+pnpm deploy           # deploy the Worker
+```
+
+### Troubleshooting: `relation "..." already exists`
+
+Drizzle decides what to run from `drizzle.__drizzle_migrations` (it matches the
+migration **folder name**). If a database already has the tables but that table
+is empty, Drizzle tries to re-run the first migration and hits
+`relation "monitors" already exists`.
+
+This usually means the schema was created by something other than
+`drizzle-kit migrate` (for example `drizzle-kit push`, or a Neon branch whose
+schema came from a database without migration history). The fix is to
+**baseline**: insert a row for the migration that already matches the existing
+schema, then run migrate normally so only the pending migrations are applied.
+Never drop/recreate production tables to work around this.
 
 ## Scripts
 
@@ -110,8 +153,10 @@ observability and can be streamed with `pnpm wrangler tail`.
 | `pnpm start`        | Run the compiled Node build                    |
 | `pnpm test`         | Run the test suite                             |
 | `pnpm db:generate`  | Generate a migration from schema changes       |
-| `pnpm db:migrate`   | Apply pending migrations                       |
-| `pnpm db:studio`    | Open Drizzle Studio                            |
+| `pnpm db:migrate`   | Apply pending migrations to the dev database   |
+| `pnpm db:migrate:prod` | Apply pending migrations to production      |
+| `pnpm db:studio`    | Open Drizzle Studio for the dev database       |
+| `pnpm db:studio:prod` | Open Drizzle Studio for production           |
 
 ## Endpoints
 

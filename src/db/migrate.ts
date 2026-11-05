@@ -29,6 +29,14 @@ function getDatabaseUrl(): string {
 const MAX_ATTEMPTS = 5
 
 async function main() {
+  // Print the target (without credentials) so it is obvious which branch a
+  // migration is about to touch. `pnpm db:migrate` uses dev, `db:migrate:prod`
+  // uses the production URL from .env.production.
+  const target = new URL(databaseUrl)
+  console.log(
+    `Applying migrations to ${target.pathname.replace(/^\//, '') || '(default db)'} on ${target.hostname}`,
+  )
+
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     const db = drizzle(databaseUrl)
 
