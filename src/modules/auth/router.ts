@@ -12,7 +12,7 @@ import { isUniqueViolation, withRetry } from "../../db/dbUtils.js";
 import { requireAuth, type AppEnv } from "../../middleware/auth.js";
 import { logger } from "../../lib/logger.js";
 
-const router = new Hono<AppEnv>().basePath("/auth");
+const router = new Hono<AppEnv>();
 
 router.post("/signup", async (c) => {
   const db = getDb(getConfig(c.env).database_url);
