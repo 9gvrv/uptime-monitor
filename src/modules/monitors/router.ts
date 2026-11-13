@@ -1,15 +1,16 @@
 import { Hono } from "hono";
 import { logger } from "../../lib/logger.js";
+import checkWebsite from "../../lib/checkWebsite.js";
 import { ApiResponse } from "../../lib/apiResponse.js";
 import { requireAuth, type AppEnv } from "../../middleware/auth.js";
 import { getDb } from "../../db/connection.js";
 import { getConfig } from "../../config.js";
 import { readJson } from "../../lib/readJson.js";
-import { registerMonitorSchema } from "./validationSchema.js";
+import { registerMonitorSchema, freeHealthCheckSchema, ReturnHealthCheck } from "./validationSchema.js";
 import { ApiError } from "../../lib/apiError.js";
 import { isUniqueViolation, withRetry } from "../../db/dbUtils.js";
 import { eq } from "drizzle-orm";
-import { monitors } from "./schema.js";
+import { monitors, healthChecks } from "./schema.js";
 
 const router = new Hono<AppEnv>();
 
@@ -47,7 +48,7 @@ router.post("/", requireAuth, async (c) => {
 
   const { name, url } = parsed.data;
 
-  const [existingMonitor] = await withRetry(() => db.select().from(monitors).where(eq(monitors.url, url)).limit(1));
+  const [existingMonitor] = await withRetry(() => db.select().from(monitors).where(eq(monitors.userId, id)).limit(1));
   if (existingMonitor) {
     throw new ApiError({
       statusCode: 409,
@@ -73,6 +74,28 @@ router.post("/", requireAuth, async (c) => {
     }
     throw error;
   }
+})
+
+router.post("/check/try", requireAuth, async (c) => {
+  const body = await readJson(c);
+
+  const parsed = freeHealthCheckSchema.safeParse(body);
+  if (!parsed.success) {
+    throw new ApiError({ statusCode: 400, message: "Invalid health check data" });
+  }
+  const { url } = parsed.data;
+  logger.info(`Creating health check: url=${url}`)
+
+  const websiteCheckResult = await checkWebsite(url);
+  if (!websiteCheckResult) {
+    throw new ApiError({ statusCode: 500, message: "Failed to check website" });
+  }
+
+  return c.json(new ApiResponse({
+    statusCode: 201,
+    message: "Health check completed",
+    data: websiteCheckResult,
+  }))
 })
 
 export default router;

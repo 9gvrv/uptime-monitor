@@ -3,10 +3,10 @@ import {
   serial,
   integer,
   varchar,
-  doublePrecision,
   timestamp,
   index,
-  boolean
+  boolean,
+  doublePrecision,
 } from 'drizzle-orm/pg-core'
 
 import { users } from '../users/schema.js'
