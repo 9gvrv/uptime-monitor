@@ -3,7 +3,7 @@ import { logger } from "../../lib/logger.js";
 import checkWebsite from "../../lib/checkWebsite.js";
 import { ApiResponse } from "../../lib/apiResponse.js";
 import { requireAuth, type AppEnv } from "../../middleware/auth.js";
-import { anonymousRateLimit } from "../../middleware/rateLimit.js";
+import { rateLimit } from "../../middleware/rateLimit.js";
 
 import { getDb } from "../../db/connection.js";
 import { getConfig } from "../../config.js";
@@ -11,7 +11,7 @@ import { readJson } from "../../lib/readJson.js";
 import { registerMonitorSchema, freeHealthCheckSchema, ReturnHealthCheck } from "./validationSchema.js";
 import { ApiError } from "../../lib/apiError.js";
 import { isUniqueViolation, withRetry } from "../../db/dbUtils.js";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { monitors, healthChecks } from "./schema.js";
 
 const router = new Hono<AppEnv>();
@@ -78,7 +78,7 @@ router.post("/", requireAuth, async (c) => {
   }
 })
 
-router.post("/check/try", anonymousRateLimit, async (c) => {
+router.post("/check/try", rateLimit(), async (c) => {
   const body = await readJson(c);
 
   const parsed = freeHealthCheckSchema.safeParse(body);
