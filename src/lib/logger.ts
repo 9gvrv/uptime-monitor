@@ -1,5 +1,5 @@
 /**
- * Minimal structured logger that works in both Node and Cloudflare Workers.
+ * Minimal structured logger for Cloudflare Workers.
  *
  * The previous implementation used pino with a `pino-pretty` transport. Pino
  * relies on Node streams (and worker threads for transports), which are not
@@ -23,10 +23,12 @@ const LEVEL_VALUES: Record<Level, number> = {
 
 const REDACTED_KEYS = /^(password|passwordhash|token|authorization|jwt_secret|database_url)$/i
 
+type ProcessLike = { env?: Record<string, string | undefined> }
+
 function configuredLevel(): Level {
-  // `process` only exists on Node (or in Workers when nodejs_compat is on).
-  const raw =
-    typeof process !== 'undefined' && process.env ? process.env.LOG_LEVEL : undefined
+  // Tests set LOG_LEVEL on `process.env`; read it through globalThis so the
+  // source compiles with Worker-only types (no `@types/node`).
+  const raw = (globalThis as { process?: ProcessLike }).process?.env?.LOG_LEVEL
   return raw && raw in LEVEL_VALUES ? (raw as Level) : 'info'
 }
 

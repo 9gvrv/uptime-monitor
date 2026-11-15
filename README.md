@@ -1,53 +1,54 @@
 # uptime-monitor
 
-A simple uptime monitoring API built with Hono, Drizzle ORM and PostgreSQL (Neon).
-Runs on Node for local development and deploys to **Cloudflare Workers**.
+A simple uptime monitoring API built with Hono, Drizzle ORM and PostgreSQL
+(Neon). Runs on **Cloudflare Workers** — locally through `wrangler dev` and in
+production on Cloudflare.
 
 ## Stack
 
 - [Hono](https://hono.dev) — HTTP framework
 - [Drizzle ORM](https://orm.drizzle.team) — schema + migrations
-- [Neon serverless driver](https://neon.tech/docs/serverless/serverless-drivers) — HTTP Postgres, Worker-compatible
+- [Neon serverless driver](https://neon.tech/docs/serverless/serverless-drivers) — HTTP Postgres
 - [Zod](https://zod.dev) — env/config + request validation
-- [bcryptjs](https://github.com/dcodeIO/bcrypt.js) — pure-JS password hashing (the native `bcrypt` addon cannot run on Workers)
-- TypeScript, run with `tsx` locally, bundled by Wrangler for deployment
+- [bcryptjs](https://github.com/dcodeIO/bcrypt.js) — pure-JS password hashing
+- TypeScript, bundled and served by Wrangler
+- Vitest for tests
 
 ## Requirements
 
-- Node.js 24+
+- Node.js 24+ — only to run the `pnpm`, Wrangler and Drizzle CLIs. The
+  application itself runs on Workerd (`wrangler dev` locally, Cloudflare in
+  production).
 - pnpm
 - A PostgreSQL database (Neon)
 - A Cloudflare account (for deployment)
 
-> **Note:** password hashing uses bcrypt cost 12. On Workers this needs a paid
-> plan (the Free plan's 10 ms CPU limit is too small for bcrypt). Lower
-> `SALT_ROUNDS` in `src/modules/auth/security.ts` if you must stay on Free.
+> **Note:** password hashing uses bcrypt cost 4 (`SALT_ROUNDS` in
+> `src/modules/auth/security.ts`), which fits the Workers Free plan. Raising it
+> to 10–12 gives stronger hashes but needs a paid plan (the Free plan's 10 ms
+> CPU limit is too small).
 
-## Setup (local, Node)
-
-```bash
-pnpm install
-cp .env.example .env   # then fill in the values
-pnpm db:migrate        # apply migrations
-pnpm dev
-```
-
-The server runs on http://localhost:3000 by default.
-
-## Setup (local, Workers runtime)
-
-Use this to run the exact runtime that production uses (workerd):
+## Setup (local)
 
 ```bash
 pnpm install
+pnpm cf:types                    # generate Worker binding types
 cp .dev.vars.example .dev.vars   # then fill in the values
-pnpm db:migrate                  # migrations run from Node, not the Worker
-pnpm dev:worker                  # wrangler dev on http://localhost:8787
+pnpm db:migrate                  # apply migrations
+pnpm dev                         # wrangler dev on http://localhost:8787
 ```
+
+`pnpm dev` runs the Worker in Workerd, the same runtime Cloudflare uses in
+production. It reads local bindings from `.dev.vars`; non-secret values live in
+the `vars` block of `wrangler.jsonc`.
+
+`pnpm db:migrate` applies migrations with `drizzle-kit` and loads `.dev.vars`
+by default, so there is only one local environment file to maintain.
 
 ## Deploying to Cloudflare Workers
 
-`wrangler.jsonc` is already configured (`main: src/worker.ts`, `nodejs_compat`).
+`wrangler.jsonc` is already configured (`main: src/worker.ts`,
+`nodejs_compat`).
 
 1. Log in and set the two secrets (they are never written to the config file):
 
@@ -68,8 +69,10 @@ pnpm dev:worker                  # wrangler dev on http://localhost:8787
    pnpm db:migrate:prod
    ```
 
-   The command prints the target database host before applying anything, so
-   you can confirm it is the production branch.
+   The migration tooling runs from the CLI (not from the Worker), so production
+   migrations still require the `drizzle-kit` command. It prints the target
+   database host before applying anything, so you can confirm it is the
+   production branch.
 
 3. Deploy:
 
@@ -95,33 +98,31 @@ observability and can be streamed with `pnpm wrangler tail`.
 | `APP_VERSION`  | yes      | —             | App version returned by the API  |
 | `DATABASE_URL` | yes      | —             | PostgreSQL connection string     |
 | `JWT_SECRET`   | yes      | —             | HMAC secret used to sign JWTs    |
-| `PORT`         | no       | `3000`        | HTTP port (Node dev server only) |
 | `NODE_ENV`     | no       | `development` | `development` / `test` / `production` |
 | `LOG_LEVEL`    | no       | `info`        | `fatal` / `error` / `warn` / `info` / `debug` / `trace` / `silent` |
 
-- On Node these come from `.env` (loaded with `dotenv`) for development.
-- Production ops (`db:migrate:prod`, `db:studio:prod`) load `.env.production`.
-- On Workers they come from `wrangler.jsonc` `vars` + secrets (and `.dev.vars`
-  locally). The Node entry point validates config at startup and exits; the
-  Worker validates on the first request and returns a 500 if anything is
-  missing.
+- Locally these come from `.dev.vars` (secrets) and `wrangler.jsonc` `vars`
+  (non-secrets). `wrangler dev` loads them into `c.env`.
+- In production they come from Cloudflare secrets and `wrangler.jsonc` `vars`.
+- The migration and Studio commands load `.dev.vars` by default, or
+  `.env.production` when `ENV_FILE=.env.production` is set.
 
 ## Environments and migrations
 
 Do not comment database URLs in and out of one file. Use one file per target:
 
-| File                | Used by                                                        | Contents |
-| ------------------- | -------------------------------------------------------------- | -------- |
-| `.env`              | `pnpm dev`, `pnpm db:migrate`, `pnpm db:studio`                | Development DB + app secrets |
-| `.env.production`   | `pnpm db:migrate:prod`, `pnpm db:studio:prod`                  | Production DB only (gitignored) |
-| `.dev.vars`         | `pnpm dev:worker`                                              | Local Worker bindings, pointing at the dev DB |
-| Cloudflare secrets  | the deployed Worker                                            | Production `DATABASE_URL` + `JWT_SECRET` |
+| File                | Used by                                                       | Contents |
+| ------------------- | ------------------------------------------------------------- | -------- |
+| `.dev.vars`         | `pnpm dev`, `pnpm db:migrate`, `pnpm db:studio`               | Local DB + app secrets |
+| `.env.production`   | `pnpm db:migrate:prod`, `pnpm db:studio:prod`                 | Production DB only (gitignored) |
+| Cloudflare secrets  | the deployed Worker                                           | Production `DATABASE_URL` + `JWT_SECRET` |
+| `wrangler.jsonc`    | local Worker (`wrangler dev`) and deployed Worker             | Non-secret `vars` |
 
 Typical flow after changing a schema:
 
 ```bash
 pnpm db:generate      # write the SQL migration from src/modules/**/schema.ts
-pnpm db:migrate       # apply it to the development branch
+pnpm db:migrate       # apply it to the local/dev branch
 pnpm db:migrate:prod  # apply it to the production branch
 pnpm deploy           # deploy the Worker
 ```
@@ -142,21 +143,19 @@ Never drop/recreate production tables to work around this.
 
 ## Scripts
 
-| Script              | Description                                    |
-| ------------------- | ---------------------------------------------- |
-| `pnpm dev`          | Start the Node dev server with watch mode      |
-| `pnpm dev:worker`   | Start the Worker locally with `wrangler dev`   |
-| `pnpm deploy`       | Deploy to Cloudflare Workers                   |
-| `pnpm deploy:dry-run` | Bundle the Worker without deploying          |
-| `pnpm cf:types`     | Generate Worker binding types with `wrangler types` |
-| `pnpm build`        | Compile TypeScript to `dist/` (Node)           |
-| `pnpm start`        | Run the compiled Node build                    |
-| `pnpm test`         | Run the test suite                             |
-| `pnpm db:generate`  | Generate a migration from schema changes       |
-| `pnpm db:migrate`   | Apply pending migrations to the dev database   |
-| `pnpm db:migrate:prod` | Apply pending migrations to production      |
-| `pnpm db:studio`    | Open Drizzle Studio for the dev database       |
-| `pnpm db:studio:prod` | Open Drizzle Studio for production           |
+| Script                | Description                                        |
+| --------------------- | -------------------------------------------------- |
+| `pnpm dev`            | Start the Worker locally with `wrangler dev`       |
+| `pnpm deploy`         | Deploy to Cloudflare Workers                       |
+| `pnpm deploy:dry-run` | Bundle the Worker without deploying                |
+| `pnpm cf:types`       | Generate Worker binding types with `wrangler types` |
+| `pnpm build`          | Type-check the source with `tsc --noEmit`          |
+| `pnpm test`           | Run the test suite                                 |
+| `pnpm db:generate`    | Generate a migration from schema changes           |
+| `pnpm db:migrate`     | Apply pending migrations to the local/dev database |
+| `pnpm db:migrate:prod`| Apply pending migrations to production             |
+| `pnpm db:studio`      | Open Drizzle Studio for the local/dev database     |
+| `pnpm db:studio:prod` | Open Drizzle Studio for production                 |
 
 ## Endpoints
 
@@ -170,24 +169,24 @@ Never drop/recreate production tables to work around this.
 
 ```
 src/
-  index.ts              Node entry point (@hono/node-server)
   worker.ts             Cloudflare Worker entry point
-  app.ts                Hono app shared by both runtimes
+  app.ts                Hono app (middleware + routes)
   config.ts             env/bindings validation (zod)
-  lib/logger.ts         runtime-agnostic JSON logger
+  lib/logger.ts         Worker-compatible JSON logger
   db/connection.ts      lazily-cached Drizzle client (Neon HTTP)
-  db/migrate.ts         migration runner (Node only)
+  db/dbUtils.ts         retry/error helpers
+  middleware/rateLimit.ts  Cloudflare rate-limiting binding middleware
   modules/
     users/schema.ts     users table
     monitors/schema.ts  monitors table
 drizzle/                generated SQL migrations
-wrangler.jsonc          Worker config (entry, vars, compatibility flags)
+wrangler.jsonc          Worker config (entry, vars, rate limiting, compatibility)
 .dev.vars.example       local Worker secrets template
 ```
 
-### How the dual runtime works
+### Runtime
 
-`src/app.ts` builds one Hono app that reads configuration from `c.env`
-(Workers bindings). The Node entry point passes `process.env` as those
-bindings; `src/worker.ts` exports the same app so Wrangler can serve it. No
-application code is duplicated per runtime.
+`src/worker.ts` is the only entry point. It exports the Hono app, and Wrangler
+serves it through Workerd both locally and in production. Configuration and
+bindings are read from `c.env`, and the rate limiter uses the
+`FREE_RATE_LIMITER` binding from `wrangler.jsonc`.

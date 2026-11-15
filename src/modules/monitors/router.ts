@@ -3,6 +3,8 @@ import { logger } from "../../lib/logger.js";
 import checkWebsite from "../../lib/checkWebsite.js";
 import { ApiResponse } from "../../lib/apiResponse.js";
 import { requireAuth, type AppEnv } from "../../middleware/auth.js";
+import { anonymousRateLimit } from "../../middleware/rateLimit.js";
+
 import { getDb } from "../../db/connection.js";
 import { getConfig } from "../../config.js";
 import { readJson } from "../../lib/readJson.js";
@@ -76,7 +78,7 @@ router.post("/", requireAuth, async (c) => {
   }
 })
 
-router.post("/check/try", requireAuth, async (c) => {
+router.post("/check/try", anonymousRateLimit, async (c) => {
   const body = await readJson(c);
 
   const parsed = freeHealthCheckSchema.safeParse(body);

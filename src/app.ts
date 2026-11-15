@@ -13,9 +13,9 @@ import type { ContentfulStatusCode } from "hono/utils/http-status";
 /**
  * Creates the Hono app instance with middleware and routes.
  *
- * The app is runtime-agnostic: it reads configuration from `c.env` bindings,
- * so the exact same instance is served by `@hono/node-server` in development
- * and by the Cloudflare Worker entry point (`src/worker.ts`) in production.
+ * The app reads configuration from `c.env` bindings, so the exact same
+ * instance is served by `wrangler dev` locally and by the deployed Cloudflare
+ * Worker (`src/worker.ts`).
  */
 const createApp = () => {
   const app = new Hono<AppEnv>()

@@ -1,10 +1,10 @@
 import { config as loadEnv } from 'dotenv'
 import { defineConfig } from 'drizzle-kit'
 
-// `.env` for development (the default) and `.env.production` for production
-// ops. Select the file explicitly with ENV_FILE, e.g.
+// Local development reads the same `.dev.vars` file that `wrangler dev` uses.
+// Production ops load `.env.production` explicitly, e.g.
 //   ENV_FILE=.env.production pnpm db:studio
-loadEnv({ path: process.env.ENV_FILE ?? '.env', quiet: true })
+loadEnv({ path: process.env.ENV_FILE ?? '.dev.vars', quiet: true })
 
 export default defineConfig({
   dialect: 'postgresql',

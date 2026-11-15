@@ -12,8 +12,7 @@ export type AuthUser = {
 /**
  * Hono environment used across the app.
  *
- * - `Bindings` are the runtime env values (`c.env`): vars and secrets on
- *   Workers, `process.env` on the Node dev server.
+ * - `Bindings` are the runtime env values (`c.env`): vars and secrets.
  * - `Variables` make `c.get("user")` type-safe.
  */
 export type AppEnv = {

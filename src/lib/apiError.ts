@@ -39,8 +39,15 @@ class ApiError extends Error {
 
     if (stack) {
       this.stack = stack;
-    } else if (Error.captureStackTrace) {
-      Error.captureStackTrace(this, this.constructor);
+    } else {
+      // V8 (Node and Workerd) provides this, but it is not in the
+      // standard lib types used for Workers.
+      const captureStackTrace = (
+        Error as unknown as {
+          captureStackTrace?: (target: object, constructor?: Function) => void;
+        }
+      ).captureStackTrace;
+      captureStackTrace?.(this, this.constructor);
     }
   }
 }
