@@ -5,23 +5,6 @@
   "compatibility_date": "2026-11-01",
   "compatibility_flags": ["nodejs_compat"],
 
-  // Rate limiting configuration for the worker.
-  "ratelimits": [
-    {
-      "name": "FREE_RATE_LIMITER",
-      // An identifier you define, that is unique to your Cloudflare account.
-      // Must be an integer.
-      "namespace_id": "1001",
-      // Limit: the request threshold within a given period in a single
-      // Cloudflare location. Requests can exceed this threshold.
-      // Period: the duration of the period, in seconds. Must be either 10 or 60
-      "simple": {
-        "limit": 10,
-        "period": 60,
-      },
-    },
-  ],
-
   // Declared so `wrangler dev` warns when a local `.dev.vars` is missing them,
   // and so generated types include them. Values are set with
   // `wrangler secret put <NAME>` — never committed here.

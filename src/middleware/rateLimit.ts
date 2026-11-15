@@ -1,6 +1,5 @@
 import type { MiddlewareHandler, Context } from "hono";
 import { HTTPException } from "hono/http-exception";
-import { ApiError } from "../lib/apiError";
 
 interface RateLimitData {
   count: number;
