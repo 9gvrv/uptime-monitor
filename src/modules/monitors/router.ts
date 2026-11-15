@@ -50,7 +50,7 @@ router.post("/", requireAuth, async (c) => {
 
   const { name, url } = parsed.data;
 
-  const [existingMonitor] = await withRetry(() => db.select().from(monitors).where(eq(monitors.userId, id)).limit(1));
+  const [existingMonitor] = await withRetry(() => db.select().from(monitors).where(and(eq(monitors.url, url), eq(monitors.userId, id))).limit(1));
   if (existingMonitor) {
     throw new ApiError({
       statusCode: 409,
