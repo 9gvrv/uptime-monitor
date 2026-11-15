@@ -38,6 +38,32 @@ router.get("/", requireAuth, async (c) => {
   }))
 });
 
+router.get("/:id", requireAuth, async (c) => {
+  const db = getDb(getConfig(c.env).database_url);
+  const id = Number(c.req.param("id"));
+
+  if (!id) throw new ApiError({ statusCode: 400, message: "Missing id" });
+
+  const [monitor] = await withRetry(() =>
+    db.select()
+      .from(monitors)
+      .where(and(
+        eq(monitors.id, id),
+        eq(monitors.userId, c.get("user").id)
+      ))
+      .limit(1)
+  )
+
+  if (!monitor) throw new ApiError({ statusCode: 404, message: "Monitor not found" });
+
+
+  return c.json(new ApiResponse({
+    statusCode: 200,
+    message: "Monitor",
+    data: monitor,
+  }))
+})
+
 router.post("/", requireAuth, async (c) => {
   logger.info("POST /monitors");
   const db = getDb(getConfig(c.env).database_url);
@@ -76,6 +102,55 @@ router.post("/", requireAuth, async (c) => {
     }
     throw error;
   }
+})
+
+router.delete("/:id", requireAuth, async (c) => {
+  const db = getDb(getConfig(c.env).database_url);
+  const id = Number(c.req.param("id"));
+
+  if (!id) throw new ApiError({ statusCode: 400, message: "Missing id" });
+
+  const [result] = await withRetry(() =>
+    db.delete(monitors).
+      where(and(
+        eq(monitors.id, id),
+        eq(monitors.userId, c.get("user").id),
+    )).returning()
+  )
+
+  if (!result) throw new ApiError({ statusCode: 404, message: "Monitor not found" });
+
+  return c.json(new ApiResponse({
+    statusCode: 200,
+    message: "Monitor deleted",
+    data: result,
+  }))
+})
+
+router.put("/:id", requireAuth, async (c) => {
+  const db = getDb(getConfig(c.env).database_url);
+  const id = Number(c.req.param("id"));
+  const body = await readJson(c);
+
+  if (!id) throw new ApiError({ statusCode: 400, message: "Missing id" });
+
+  const [result] = await withRetry(() =>
+    db.update(monitors)
+      .set(body)
+      .where(and(
+        eq(monitors.id, id),
+        eq(monitors.userId, c.get("user").id),
+      ))
+      .returning()
+  )
+
+  if (!result) throw new ApiError({ statusCode: 404, message: "Monitor not found" });
+
+  return c.json(new ApiResponse({
+    statusCode: 200,
+    message: "Monitor updated",
+    data: result,
+  }))
 })
 
 router.post("/check/try", rateLimit(), async (c) => {
