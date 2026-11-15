@@ -78,7 +78,7 @@ router.post("/", requireAuth, async (c) => {
   }
 })
 
-router.post("/check/try", async (c) => {
+router.post("/check/try", anonymousRateLimit, async (c) => {
   const body = await readJson(c);
 
   const parsed = freeHealthCheckSchema.safeParse(body);
