@@ -21,7 +21,6 @@ coverage/
 # env
 .env
 .env.*
-!.env.example
 
 # cloudflare
 .dev.vars
