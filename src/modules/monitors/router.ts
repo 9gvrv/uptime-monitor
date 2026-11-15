@@ -100,4 +100,61 @@ router.post("/check/try", rateLimit(), async (c) => {
   }))
 })
 
+router.post("/:id/check", requireAuth, rateLimit(20, 60000), async (c) => {
+  const db = getDb(getConfig(c.env).database_url);
+  const id = Number(c.req.param("id"));
+
+  if (!id) {
+    throw new ApiError({ statusCode: 400, message: "Invalid monitor ID" });
+  }
+
+  const [monitor] = await withRetry(() => db
+    .select()
+    .from(monitors)
+    .where(
+      and(
+        eq(monitors.id, id),
+        eq(monitors.userId, c.get("user").id)
+      )
+    )
+    .limit(1))
+
+  if (!monitor) {
+    throw new ApiError({ statusCode: 404, message: "Monitor not found" });
+  }
+
+  const websiteCheckResult = await withRetry(() => checkWebsite(monitor.url))
+  if (!websiteCheckResult) {
+    throw new ApiError({ statusCode: 500, message: "Failed to check website" });
+  }
+
+  const { statusCode, latencyMs, isUp, errorMessage } = websiteCheckResult;
+
+  const [healthCheck] = await withRetry(() => db
+    .insert(healthChecks)
+    .values({
+      monitorId: id,
+      statusCode,
+      latencyMs,
+      isUp,
+      errorMessage,
+    }).returning())
+
+  if (!healthCheck) {
+    throw new ApiError({ statusCode: 500, message: "Failed to save health check" });
+  }
+  const parsed = ReturnHealthCheck.safeParse(healthCheck);
+  if (!parsed.success) {
+    throw new ApiError({ statusCode: 500, message: "Failed to parse health check" });
+  }
+
+
+  return c.json(new ApiResponse({
+    statusCode: 200,
+    message: "Health check completed",
+    data: parsed.data,
+  }))
+})
+
+
 export default router;
