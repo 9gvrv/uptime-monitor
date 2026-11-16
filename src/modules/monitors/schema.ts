@@ -7,9 +7,11 @@ import {
   index,
   boolean,
   doublePrecision,
+  text,
 } from 'drizzle-orm/pg-core'
 
-import { users } from '../users/schema.js'
+import { users } from '../users/schema.js';
+import { groups } from '../groups/schema.js';
 
 
 export const monitors = pgTable(
@@ -20,6 +22,9 @@ export const monitors = pgTable(
     userId: integer('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
+
+    groupId: integer('group_id')
+      .references(() => groups.id, { onDelete: 'set null' }),
 
     name: varchar('name', { length: 100 }).notNull(),
     url: varchar('url', { length: 2048 }).notNull(),
@@ -36,6 +41,7 @@ export const monitors = pgTable(
   },
   (table) => [
     index('ix_monitors_user_id').on(table.userId),
+    index('ix_monitors_group_id').on(table.groupId),
   ],
 )
 
@@ -54,7 +60,7 @@ export const healthChecks = pgTable(
 
     isUp: boolean('is_up').notNull(),
 
-    errorMessage: varchar('error_message', { length: 2048 }),
+    errorMessage: text('error_message'),
 
     checkedAt: timestamp('checked_at', { withTimezone: true })
       .defaultNow()
