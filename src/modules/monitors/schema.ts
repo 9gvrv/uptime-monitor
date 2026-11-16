@@ -6,13 +6,18 @@ import {
   timestamp,
   index,
   boolean,
-  doublePrecision,
+  pgEnum,
+  smallint,
   text,
 } from 'drizzle-orm/pg-core'
 
 import { users } from '../users/schema.js';
 import { groups } from '../groups/schema.js';
+import type { ErrorType } from '../../lib/checkWebsite.js';
 
+
+
+export const checkStatus = pgEnum('check_status', ['up', 'down', 'degraded'])
 
 export const monitors = pgTable(
   'monitors',
@@ -54,18 +59,23 @@ export const healthChecks = pgTable(
       .notNull()
       .references(() => monitors.id, { onDelete: 'cascade' }),
 
-    statusCode: integer('status_code'),
+    status: checkStatus('status').notNull(),
 
-    latencyMs: doublePrecision('latency_ms'),
+    statusCode: smallint('status_code'),
+    finalUrl: text('final_url'),
+    redirectCount: smallint('redirect_count').notNull().default(0),
 
-    isUp: boolean('is_up').notNull(),
+    ttfbMs: integer('ttfb_ms'),
+    totalMs: integer('total_ms').notNull(),
 
+    errorType: text('error_type').$type<ErrorType>(),
     errorMessage: text('error_message'),
+
+    region: text('region'),
 
     checkedAt: timestamp('checked_at', { withTimezone: true })
       .defaultNow()
       .notNull(),
-
   },
   (table) => [
     index('ix_health_checks_monitor_id').on(table.monitorId, table.checkedAt),

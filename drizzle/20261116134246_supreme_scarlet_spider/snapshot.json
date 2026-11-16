@@ -1,0 +1,352 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "7e63bd78-b62f-4063-9053-c62ef42338dc",
+  "prevIds": [
+    "7f792306-a3c4-4798-b528-2d2120194dda"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "check_status"
+      ],
+      "writes": [
+        "s|enum|public.check_status",
+        "n|enum|public.check_status",
+        "e|enum|public.check_status",
+        "n|type|public.check_status"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "health_checks",
+        "status"
+      ],
+      "writes": [
+        "s|col|public.health_checks.status",
+        "n|col|public.health_checks.status",
+        "e|col|public.health_checks.status"
+      ],
+      "reads": [
+        "n|tbl|public.health_checks",
+        "n|sch|public",
+        "n|enum|public.check_status"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "health_checks",
+        "final_url"
+      ],
+      "writes": [
+        "s|col|public.health_checks.final_url",
+        "n|col|public.health_checks.final_url",
+        "e|col|public.health_checks.final_url"
+      ],
+      "reads": [
+        "n|tbl|public.health_checks",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "health_checks",
+        "redirect_count"
+      ],
+      "writes": [
+        "s|col|public.health_checks.redirect_count",
+        "n|col|public.health_checks.redirect_count",
+        "e|col|public.health_checks.redirect_count"
+      ],
+      "reads": [
+        "n|tbl|public.health_checks",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "health_checks",
+        "ttfb_ms"
+      ],
+      "writes": [
+        "s|col|public.health_checks.ttfb_ms",
+        "n|col|public.health_checks.ttfb_ms",
+        "e|col|public.health_checks.ttfb_ms"
+      ],
+      "reads": [
+        "n|tbl|public.health_checks",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "health_checks",
+        "total_ms"
+      ],
+      "writes": [
+        "s|col|public.health_checks.total_ms",
+        "n|col|public.health_checks.total_ms",
+        "e|col|public.health_checks.total_ms"
+      ],
+      "reads": [
+        "n|tbl|public.health_checks",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "health_checks",
+        "error_type"
+      ],
+      "writes": [
+        "s|col|public.health_checks.error_type",
+        "n|col|public.health_checks.error_type",
+        "e|col|public.health_checks.error_type"
+      ],
+      "reads": [
+        "n|tbl|public.health_checks",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "health_checks",
+        "region"
+      ],
+      "writes": [
+        "s|col|public.health_checks.region",
+        "n|col|public.health_checks.region",
+        "e|col|public.health_checks.region"
+      ],
+      "reads": [
+        "n|tbl|public.health_checks",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "drop_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "health_checks",
+        "latency_ms"
+      ],
+      "writes": [
+        "s|col|public.health_checks.latency_ms",
+        "n|col|public.health_checks.latency_ms",
+        "e|col|public.health_checks.latency_ms"
+      ],
+      "reads": [
+        "n|tbl|public.health_checks",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "drop_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "health_checks",
+        "is_up"
+      ],
+      "writes": [
+        "s|col|public.health_checks.is_up",
+        "n|col|public.health_checks.is_up",
+        "e|col|public.health_checks.is_up"
+      ],
+      "reads": [
+        "n|tbl|public.health_checks",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "alter_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "health_checks",
+        "status_code"
+      ],
+      "writes": [
+        "s|colprop|public.health_checks.status_code.type",
+        "s|colprop|public.health_checks.status_code.default"
+      ],
+      "reads": [
+        "n|tbl|public.health_checks",
+        "n|sch|public",
+        "n|col|public.health_checks.status_code"
+      ],
+      "sqlHash": "e89a38ddda30833d"
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "check_status",
+        "values": [
+          "up",
+          "down",
+          "degraded"
+        ],
+        "entityType": "enums"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "health_checks",
+        "name": "status",
+        "type": "check_status",
+        "typeSchema": "public",
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "health_checks",
+        "name": "final_url",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "health_checks",
+        "name": "redirect_count",
+        "type": "smallint",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "0",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "health_checks",
+        "name": "ttfb_ms",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "health_checks",
+        "name": "total_ms",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "health_checks",
+        "name": "error_type",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "health_checks",
+        "name": "region",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"health_checks\",\"latency_ms\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"health_checks\",\"is_up\"]"
+    },
+    {
+      "op": "alter",
+      "key": "columns\u0000[\"public\",\"health_checks\",\"status_code\"]",
+      "set": {
+        "type": "smallint"
+      }
+    }
+  ]
+}
