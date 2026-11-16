@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { logger } from "../../lib/logger.js";
-import checkWebsite from "../../lib/checkWebsite.js";
+import { checkWebsite } from "../../lib/checkWebsite.js";
 import { ApiResponse } from "../../lib/apiResponse.js";
 import { requireAuth, type AppEnv } from "../../middleware/auth.js";
 import { rateLimit } from "../../middleware/rateLimit.js";
@@ -274,16 +274,27 @@ router.post("/:id/check", requireAuth, rateLimit(20, 60000), async (c) => {
     throw new ApiError({ statusCode: 500, message: "Failed to check website" });
   }
 
-  const { statusCode, latencyMs, isUp, errorMessage } = websiteCheckResult;
+  const {
+    status,
+    statusCode,
+    finalUrl,
+    redirectCount,
+    timings,
+    error,
+  } = websiteCheckResult;
 
   const [healthCheck] = await withRetry(() => db
     .insert(healthChecks)
     .values({
       monitorId: id,
+      status,
       statusCode,
-      latencyMs,
-      isUp,
-      errorMessage,
+      finalUrl,
+      redirectCount,
+      ttfbMs: timings.ttfbMs,
+      totalMs: timings.totalMs,
+      errorType: error?.type ?? null,
+      errorMessage: error?.message ?? null,
     }).returning())
 
   if (!healthCheck) {
