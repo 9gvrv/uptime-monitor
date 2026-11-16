@@ -10,6 +10,7 @@ import { ApiError } from "../../lib/apiError.js";
 import { withRetry } from "../../db/dbUtils.js";
 import { eq, and } from "drizzle-orm";
 import { groups } from "./schema.js";
+import { monitors } from "../monitors/schema.js";
 
 const router = new Hono<AppEnv>();
 
@@ -35,6 +36,48 @@ router.get('/', requireAuth, async (c) => {
     data: groupsData,
   }))
 });
+
+router.get("/:id/monitors", requireAuth, async (c) => {
+  logger.info("GET /groups/:id/monitors");
+  const db = getDb(getConfig(c.env).database_url);
+  const userId = c.get("user").id;
+  const id = Number(c.req.param("id"));
+
+  if (!id) throw new ApiError({ statusCode: 400, message: "Missing id" });
+
+  const [group] = await withRetry(() =>
+    db.select()
+      .from(groups)
+      .where(and(
+        eq(groups.id, id),
+        eq(groups.userId, userId)
+      ))
+      .limit(1)
+  )
+
+  if (!group) throw new ApiError({ statusCode: 404, message: "Group not found" });
+
+  const { page, limit } = c.req.query();
+  const parsedPage = Number(page) || 1;
+  const parsedLimit = Number(limit) || 10;
+
+  const monitorsData = await withRetry(() =>
+    db.select()
+      .from(monitors)
+      .where(and(
+        eq(monitors.groupId, id),
+        eq(monitors.userId, userId)
+      ))
+      .offset((parsedPage - 1) * parsedLimit)
+      .limit(parsedLimit)
+  )
+
+  return c.json(new ApiResponse({
+    statusCode: 200,
+    message: "Group monitors",
+    data: monitorsData,
+  }))
+})
 
 router.get("/:id", requireAuth, async (c) => {
   const db = getDb(getConfig(c.env).database_url);

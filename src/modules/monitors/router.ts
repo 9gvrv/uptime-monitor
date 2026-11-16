@@ -13,6 +13,7 @@ import { ApiError } from "../../lib/apiError.js";
 import { isUniqueViolation, withRetry } from "../../db/dbUtils.js";
 import { eq, and } from "drizzle-orm";
 import { monitors, healthChecks } from "./schema.js";
+import { groups } from "../groups/schema.js";
 
 const router = new Hono<AppEnv>();
 
@@ -154,6 +155,71 @@ router.put("/:id", requireAuth, async (c) => {
   return c.json(new ApiResponse({
     statusCode: 200,
     message: "Monitor updated",
+    data: result,
+  }))
+})
+
+router.put("/:id/group", requireAuth, async (c) => {
+  logger.info("PUT /monitors/:id/group");
+  const db = getDb(getConfig(c.env).database_url);
+  const id = Number(c.req.param("id"));
+  const userId = c.get("user").id;
+
+  if (!id) throw new ApiError({ statusCode: 400, message: "Missing id" });
+
+  const body = await readJson(c);
+
+  if (!body || !("groupId" in body)) {
+    throw new ApiError({ statusCode: 400, message: "groupId is required (use null to remove from all groups)" });
+  }
+
+  const groupId = body.groupId;
+
+  if (groupId !== null && (!Number.isInteger(groupId) || groupId <= 0)) {
+    throw new ApiError({ statusCode: 400, message: "groupId must be a positive integer or null" });
+  }
+
+  const [monitor] = await withRetry(() =>
+    db.select()
+      .from(monitors)
+      .where(and(
+        eq(monitors.id, id),
+        eq(monitors.userId, userId)
+      ))
+      .limit(1)
+  )
+
+  if (!monitor) throw new ApiError({ statusCode: 404, message: "Monitor not found" });
+
+  if (groupId !== null) {
+    const [group] = await withRetry(() =>
+      db.select()
+        .from(groups)
+        .where(and(
+          eq(groups.id, groupId),
+          eq(groups.userId, userId)
+        ))
+        .limit(1)
+    )
+
+    if (!group) throw new ApiError({ statusCode: 404, message: "Group not found" });
+  }
+
+  const [result] = await withRetry(() =>
+    db.update(monitors)
+      .set({ groupId, updatedAt: new Date() })
+      .where(and(
+        eq(monitors.id, id),
+        eq(monitors.userId, userId),
+      ))
+      .returning()
+  )
+
+  if (!result) throw new ApiError({ statusCode: 404, message: "Monitor not found" });
+
+  return c.json(new ApiResponse({
+    statusCode: 200,
+    message: groupId === null ? "Monitor removed from group" : "Monitor moved to group",
     data: result,
   }))
 })
