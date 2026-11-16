@@ -20,6 +20,9 @@ router.get("/", requireAuth, async (c) => {
   logger.info("GET /monitors")
   const db = getDb(getConfig(c.env).database_url);
   const { id } = c.get("user");
+  const { page, limit } = c.req.query();
+  const parsedPage = Number(page) || 1;
+  const parsedLimit = Number(limit) || 10;
 
   const monitor = await withRetry(() =>
     db.select({
@@ -29,6 +32,8 @@ router.get("/", requireAuth, async (c) => {
       createdAt: monitors.createdAt,
       updatedAt: monitors.updatedAt,
     }).from(monitors).where(eq(monitors.userId, id))
+    .offset((parsedPage - 1) * parsedLimit)
+    .limit(parsedLimit)
   )
 
   return c.json(new ApiResponse({
