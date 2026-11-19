@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "uq_monitors_user_id_url" ON "monitors" ("user_id","url");

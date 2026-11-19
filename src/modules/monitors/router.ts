@@ -8,7 +8,14 @@ import { rateLimit } from "../../middleware/rateLimit.js";
 import { getDb } from "../../db/connection.js";
 import { getConfig } from "../../config.js";
 import { readJson } from "../../lib/readJson.js";
-import { registerMonitorSchema, freeHealthCheckSchema, ReturnHealthCheck } from "./validationSchema.js";
+import {
+  registerMonitorSchema,
+  updateMonitorSchema,
+  freeHealthCheckSchema,
+  ReturnHealthCheck,
+  ReturnMonitor,
+} from "./validationSchema.js";
+import { getPagination } from "../../lib/pagination.js";
 import { ApiError } from "../../lib/apiError.js";
 import { isUniqueViolation, withRetry } from "../../db/dbUtils.js";
 import { eq, and } from "drizzle-orm";
@@ -21,26 +28,26 @@ router.get("/", requireAuth, async (c) => {
   logger.info("GET /monitors")
   const db = getDb(getConfig(c.env).database_url);
   const { id } = c.get("user");
-  const { page, limit } = c.req.query();
-  const parsedPage = Number(page) || 1;
-  const parsedLimit = Number(limit) || 10;
+  const { limit, offset } = getPagination(c);
 
   const monitor = await withRetry(() =>
     db.select({
       id: monitors.id,
       name: monitors.name,
       url: monitors.url,
+      isActive: monitors.isActive,
+      groupId: monitors.groupId,
       createdAt: monitors.createdAt,
       updatedAt: monitors.updatedAt,
     }).from(monitors).where(eq(monitors.userId, id))
-    .offset((parsedPage - 1) * parsedLimit)
-    .limit(parsedLimit)
+    .offset(offset)
+    .limit(limit)
   )
 
   return c.json(new ApiResponse({
     statusCode: 200,
     message: "Monitors",
-    data: [monitor],
+    data: monitor,
   }))
 });
 
@@ -91,12 +98,15 @@ router.post("/", requireAuth, async (c) => {
   }
 
   try {
-    const [monitor] = await withRetry(() =>
+    const [inserted] = await withRetry(() =>
       db.insert(monitors).values({ userId: id, name, url }).returning()
-    )
+    );
 
-    const result = registerMonitorSchema.parse(monitor);
-    if (!result) throw new ApiError({ statusCode: 500, message: "Failed to create monitor" });
+    if (!inserted) throw new ApiError({ statusCode: 500, message: "Failed to create monitor" });
+
+    // Parse through the *response* schema, not the input schema: the input
+    // schema only knows {name, url} and would strip the generated `id`.
+    const result = ReturnMonitor.parse(inserted);
     return c.json(new ApiResponse({
       statusCode: 201,
       message: "Monitor created",
@@ -134,21 +144,65 @@ router.delete("/:id", requireAuth, async (c) => {
 })
 
 router.put("/:id", requireAuth, async (c) => {
+  logger.info("PUT /monitors/:id");
   const db = getDb(getConfig(c.env).database_url);
   const id = Number(c.req.param("id"));
-  const body = await readJson(c);
 
   if (!id) throw new ApiError({ statusCode: 400, message: "Missing id" });
 
-  const [result] = await withRetry(() =>
-    db.update(monitors)
-      .set(body)
-      .where(and(
-        eq(monitors.id, id),
-        eq(monitors.userId, c.get("user").id),
-      ))
-      .returning()
-  )
+  const body = await readJson(c);
+  const parsed = updateMonitorSchema.safeParse(body);
+  if (!parsed.success) {
+    throw new ApiError({
+      statusCode: 400,
+      message: "Validation failed",
+      errors: [parsed.error],
+    });
+  }
+
+  // The schema drops unknown keys, so callers cannot change userId, id,
+  // groupId or timestamps through this route. Only supplied fields are set.
+  const { name, url, isActive } = parsed.data;
+  const updates: {
+    name?: string;
+    url?: string;
+    isActive?: boolean;
+    updatedAt?: Date;
+  } = {
+    ...(name !== undefined && { name }),
+    ...(url !== undefined && { url }),
+    ...(isActive !== undefined && { isActive }),
+  };
+
+  if (Object.keys(updates).length === 0) {
+    return c.json(new ApiResponse({
+      statusCode: 200,
+      message: "No updates",
+      data: null,
+    }))
+  }
+
+  updates.updatedAt = new Date();
+
+  let result: typeof monitors.$inferSelect | undefined;
+  try {
+    [result] = await withRetry(() =>
+      db.update(monitors)
+        .set(updates)
+        .where(and(
+          eq(monitors.id, id),
+          eq(monitors.userId, c.get("user").id),
+        ))
+        .returning()
+    )
+  } catch (error) {
+    // The unique (user_id, url) index reports a duplicate URL as 23505.
+    // POST handles the same case; without this it becomes a generic 500.
+    if (isUniqueViolation(error)) {
+      throw new ApiError({ statusCode: 409, message: "Monitor already exists" });
+    }
+    throw error;
+  }
 
   if (!result) throw new ApiError({ statusCode: 404, message: "Monitor not found" });
 

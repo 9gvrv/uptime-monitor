@@ -7,6 +7,7 @@ import { getDb } from "../../db/connection.js";
 import { getConfig } from "../../config.js";
 import { readJson } from "../../lib/readJson.js";
 import { ApiError } from "../../lib/apiError.js";
+import { getPagination } from "../../lib/pagination.js";
 import { withRetry } from "../../db/dbUtils.js";
 import { eq, and } from "drizzle-orm";
 import { groups } from "./schema.js";
@@ -18,16 +19,14 @@ router.get('/', requireAuth, async (c) => {
   logger.info("GET /groups");
   const db = getDb(getConfig(c.env).database_url);
   const { id } = c.get("user");
-  const { page, limit } = c.req.query();
-  const parsedPage = Number(page) || 1;
-  const parsedLimit = Number(limit) || 10;
+  const { limit, offset } = getPagination(c);
 
   const groupsData = await withRetry(() =>
     db.select()
       .from(groups)
       .where(eq(groups.userId, id))
-      .offset((parsedPage - 1) * parsedLimit)
-      .limit(parsedLimit)
+      .offset(offset)
+      .limit(limit)
   );
 
   return c.json(new ApiResponse({
@@ -57,9 +56,7 @@ router.get("/:id/monitors", requireAuth, async (c) => {
 
   if (!group) throw new ApiError({ statusCode: 404, message: "Group not found" });
 
-  const { page, limit } = c.req.query();
-  const parsedPage = Number(page) || 1;
-  const parsedLimit = Number(limit) || 10;
+  const { limit, offset } = getPagination(c);
 
   const monitorsData = await withRetry(() =>
     db.select()
@@ -68,8 +65,8 @@ router.get("/:id/monitors", requireAuth, async (c) => {
         eq(monitors.groupId, id),
         eq(monitors.userId, userId)
       ))
-      .offset((parsedPage - 1) * parsedLimit)
-      .limit(parsedLimit)
+      .offset(offset)
+      .limit(limit)
   )
 
   return c.json(new ApiResponse({

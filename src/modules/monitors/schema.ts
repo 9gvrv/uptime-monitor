@@ -9,6 +9,7 @@ import {
   pgEnum,
   smallint,
   text,
+  uniqueIndex,
 } from 'drizzle-orm/pg-core'
 
 import { users } from '../users/schema.js';
@@ -47,6 +48,10 @@ export const monitors = pgTable(
   (table) => [
     index('ix_monitors_user_id').on(table.userId),
     index('ix_monitors_group_id').on(table.groupId),
+    // Enforce one monitor per URL per user at the database level. The
+    // SELECT-then-INSERT check in the POST route is only a friendly pre-check;
+    // this constraint is what actually prevents duplicates under concurrency.
+    uniqueIndex('uq_monitors_user_id_url').on(table.userId, table.url),
   ],
 )
 
