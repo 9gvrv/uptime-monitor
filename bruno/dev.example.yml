@@ -1,0 +1,8 @@
+name: dev
+variables:
+  - name: baseURL
+    value: http://localhost:8787
+    description: ""
+  - name: token
+    value: jwt token
+    description: ""

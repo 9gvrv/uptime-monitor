@@ -1,0 +1,19 @@
+info:
+  name: groups delete
+  type: http
+  seq: 18
+
+http:
+  method: DELETE
+  url: "{{baseURL}}/api/v1/groups/2"
+  headers:
+    - name: Authorization
+      value: Bearer {{token}}
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

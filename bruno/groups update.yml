@@ -1,0 +1,25 @@
+info:
+  name: groups update
+  type: http
+  seq: 17
+
+http:
+  method: PUT
+  url: "{{baseURL}}/api/v1/groups/2"
+  headers:
+    - name: Authorization
+      value: Bearer {{token}}
+  body:
+    type: json
+    data: |-
+      {
+        "description": "Collection of my office work"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

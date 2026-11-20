@@ -1,0 +1,28 @@
+info:
+  name: monitors
+  type: http
+  seq: 8
+
+http:
+  method: POST
+  url: "{{baseURL}}/api/v1/monitors"
+  headers:
+    - name: Authorization
+      value: Bearer   {{token}}
+  body:
+    type: json
+    data: |-
+      {
+        "name": "fake-endpoint",
+        "url": "https://fake-endpoint-uptime-monitor.free.beeceptor.com",
+        "interval_seconds": 43200,
+        "timeout_ms": 300
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

@@ -1,0 +1,23 @@
+info:
+  name: monitors
+  type: http
+  seq: 7
+
+http:
+  method: GET
+  url: "{{baseURL}}/api/v1/monitors?limit=2"
+  headers:
+    - name: Authorization
+      value: Bearer {{token}}
+  params:
+    - name: limit
+      value: "2"
+      type: query
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
