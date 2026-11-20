@@ -1,40 +1,37 @@
-import type { MiddlewareHandler, Context } from "hono";
-import { HTTPException } from "hono/http-exception";
+import type { Context, MiddlewareHandler } from "hono";
+import type { AppEnv } from "./auth.js";
+import { ApiError } from "../lib/apiError.js";
 
-interface RateLimitData {
-  count: number;
-  windowStart: number;
-}
+/** Rate limiter bindings declared in `wrangler.jsonc`. */
+export type RateLimitBinding = "DEV_RATE_LIMITER" | "AUTH_RATE_LIMITER";
 
-const rateLimitCache = new Map<string, RateLimitData>();
+/** A fixed key, or one derived from the request (e.g. the authenticated user id). */
+type RateLimitKey = string | ((c: Context<AppEnv>) => string);
 
-const WINDOW_MS = 60_000;
-const MAX_REQUESTS = 10;
-
-export const rateLimit = (maxRequests: number = MAX_REQUESTS, windowMs: number = WINDOW_MS): MiddlewareHandler => {
+/**
+ * Rate limiting via Cloudflare's Rate Limiting API binding.
+ *
+ * The limit and window are configured on the binding in `wrangler.jsonc`
+ * (`simple.limit` / `simple.period`), so they cannot be overridden per route.
+ * `key` identifies whose allowance is used: Cloudflare recommends a stable
+ * identifier such as a route name or user id, and explicitly advises against
+ * raw IP addresses (many users can share one).
+ */
+export const rateLimit = (
+  binding: RateLimitBinding,
+  key: RateLimitKey,
+): MiddlewareHandler<AppEnv> => {
   return async (c, next) => {
-    const ip = c.req.raw.headers.get('CF-Connecting-IP');
+    const resolvedKey = typeof key === "function" ? key(c) : key;
 
-    if (!ip) {
-      throw new HTTPException(400, { message: 'IP not found' });
-    }
-
-    const now = Date.now();
-    const data = rateLimitCache.get(ip);
-
-    if (!data || now - data.windowStart >= windowMs) {
-      rateLimitCache.set(ip, {
-        count: 1,
-        windowStart: now,
+    const { success } = await c.env[binding].limit({ key: resolvedKey });
+    if (!success) {
+      // ApiError is handled by app.onError; an HTTPException would fall through
+      // to the generic 500 handler.
+      throw new ApiError({
+        statusCode: 429,
+        message: "Rate limit exceeded",
       });
-    } else {
-      if (data.count >= maxRequests) {
-        throw new HTTPException(429, {
-          message: 'Rate limit exceeded',
-        });
-      }
-
-      data.count++;
     }
 
     await next();

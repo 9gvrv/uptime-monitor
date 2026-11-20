@@ -12,7 +12,8 @@ export type Bindings = {
   JWT_SECRET?: string
   NODE_ENV?: string
   LOG_LEVEL?: string
-  FREE_RATE_LIMITER?: RateLimit
+  DEV_RATE_LIMITER: RateLimit
+  AUTH_RATE_LIMITER: RateLimit
 }
 
 const configSchema = z.object({
