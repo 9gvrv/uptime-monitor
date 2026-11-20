@@ -8,6 +8,11 @@
     "cf:types": "wrangler types",
     "build": "wrangler types && tsc --noEmit",
     "test": "vitest",
+    "format": "biome format --write .",
+    "format:check": "biome format .",
+    "lint": "biome lint .",
+    "check": "biome check .",
+    "check:fix": "biome check --write .",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:migrate:prod": "ENV_FILE=.env.production drizzle-kit migrate",
@@ -23,6 +28,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.6.8",
     "@types/node": "^26.1.1",
     "dotenv": "^18.0.9",
     "drizzle-kit": "1.0.0-rc.5",

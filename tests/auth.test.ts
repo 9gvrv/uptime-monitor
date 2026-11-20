@@ -1,4 +1,4 @@
-import { describe, test, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 // db is mocked BEFORE any import of the app — vi.mock is hoisted above imports.
 // Every test is deterministic: no network, no real data, reproducible forever.
@@ -22,9 +22,9 @@ vi.mock("bcryptjs", () => ({
   },
 }));
 
+import bcrypt from "bcryptjs";
 import create_app from "../src/app.js";
 import { getDb } from "../src/db/connection.js";
-import bcrypt from "bcryptjs";
 import { generateToken } from "../src/modules/auth/security.js";
 import { TEST_ENV } from "./env.js";
 
@@ -231,7 +231,10 @@ describe("POST /api/v1/auth/login", () => {
   });
 
   test("rejects a malformed email in the request (400)", async () => {
-    const res = await loginRequest({ email: "not-an-email", password: "password123" });
+    const res = await loginRequest({
+      email: "not-an-email",
+      password: "password123",
+    });
 
     expect(res.status).toBe(400);
     expect((await res.json()).message).toBe("Validation failed");
@@ -240,7 +243,10 @@ describe("POST /api/v1/auth/login", () => {
 
 describe("GET /api/v1/auth/me", () => {
   test("returns the authenticated user for a valid token (200)", async () => {
-    const token = await generateToken({ id: 1, email: EMAIL }, TEST_ENV.JWT_SECRET!);
+    const token = await generateToken(
+      { id: 1, email: EMAIL },
+      TEST_ENV.JWT_SECRET!,
+    );
     mockSelect([DB_USER_FOR(EMAIL)]);
 
     const res = await meRequest(token);
@@ -279,7 +285,10 @@ describe("GET /api/v1/auth/me", () => {
   });
 
   test("returns 404 when the token is valid but the user was deleted", async () => {
-    const token = await generateToken({ id: 42, email: EMAIL }, TEST_ENV.JWT_SECRET!);
+    const token = await generateToken(
+      { id: 42, email: EMAIL },
+      TEST_ENV.JWT_SECRET!,
+    );
     mockSelect([]); // row gone between issue time and verification
 
     const res = await meRequest(token);

@@ -1,4 +1,4 @@
-import { drizzle } from 'drizzle-orm/neon-http'
+import { drizzle } from "drizzle-orm/neon-http";
 
 /**
  * Drizzle client for the Neon HTTP driver.
@@ -9,17 +9,17 @@ import { drizzle } from 'drizzle-orm/neon-http'
  * still cache by URL so reuse within an isolate is free.
  */
 
-export type Database = ReturnType<typeof drizzle>
+export type Database = ReturnType<typeof drizzle>;
 
-const clients = new Map<string, Database>()
+const clients = new Map<string, Database>();
 
 export function getDb(databaseUrl: string): Database {
-  const existing = clients.get(databaseUrl)
-  if (existing) return existing
+  const existing = clients.get(databaseUrl);
+  if (existing) return existing;
 
-  const db = drizzle(databaseUrl)
-  clients.set(databaseUrl, db)
-  return db
+  const db = drizzle(databaseUrl);
+  clients.set(databaseUrl, db);
+  return db;
 }
 
-export default getDb
+export default getDb;

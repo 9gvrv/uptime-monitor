@@ -92,13 +92,13 @@ observability and can be streamed with `pnpm wrangler tail`.
 
 ## Environment variables
 
-| Variable       | Required | Default       | Description                      |
-| -------------- | -------- | ------------- | -------------------------------- |
-| `APP_NAME`     | yes      | —             | App name returned by the API     |
-| `APP_VERSION`  | yes      | —             | App version returned by the API  |
-| `DATABASE_URL` | yes      | —             | PostgreSQL connection string     |
-| `JWT_SECRET`   | yes      | —             | HMAC secret used to sign JWTs    |
-| `NODE_ENV`     | no       | `development` | `development` / `test` / `production` |
+| Variable       | Required | Default       | Description                                                        |
+| -------------- | -------- | ------------- | ------------------------------------------------------------------ |
+| `APP_NAME`     | yes      | —             | App name returned by the API                                       |
+| `APP_VERSION`  | yes      | —             | App version returned by the API                                    |
+| `DATABASE_URL` | yes      | —             | PostgreSQL connection string                                       |
+| `JWT_SECRET`   | yes      | —             | HMAC secret used to sign JWTs                                      |
+| `NODE_ENV`     | no       | `development` | `development` / `test` / `production`                              |
 | `LOG_LEVEL`    | no       | `info`        | `fatal` / `error` / `warn` / `info` / `debug` / `trace` / `silent` |
 
 - Locally these come from `.dev.vars` (secrets) and `wrangler.jsonc` `vars`
@@ -111,12 +111,12 @@ observability and can be streamed with `pnpm wrangler tail`.
 
 Do not comment database URLs in and out of one file. Use one file per target:
 
-| File                | Used by                                                       | Contents |
-| ------------------- | ------------------------------------------------------------- | -------- |
-| `.dev.vars`         | `pnpm dev`, `pnpm db:migrate`, `pnpm db:studio`               | Local DB + app secrets |
-| `.env.production`   | `pnpm db:migrate:prod`, `pnpm db:studio:prod`                 | Production DB only (gitignored) |
-| Cloudflare secrets  | the deployed Worker                                           | Production `DATABASE_URL` + `JWT_SECRET` |
-| `wrangler.jsonc`    | local Worker (`wrangler dev`) and deployed Worker             | Non-secret `vars` |
+| File               | Used by                                           | Contents                                 |
+| ------------------ | ------------------------------------------------- | ---------------------------------------- |
+| `.dev.vars`        | `pnpm dev`, `pnpm db:migrate`, `pnpm db:studio`   | Local DB + app secrets                   |
+| `.env.production`  | `pnpm db:migrate:prod`, `pnpm db:studio:prod`     | Production DB only (gitignored)          |
+| Cloudflare secrets | the deployed Worker                               | Production `DATABASE_URL` + `JWT_SECRET` |
+| `wrangler.jsonc`   | local Worker (`wrangler dev`) and deployed Worker | Non-secret `vars`                        |
 
 Typical flow after changing a schema:
 
@@ -143,19 +143,19 @@ Never drop/recreate production tables to work around this.
 
 ## Scripts
 
-| Script                | Description                                        |
-| --------------------- | -------------------------------------------------- |
-| `pnpm dev`            | Start the Worker locally with `wrangler dev`       |
-| `pnpm deploy`         | Deploy to Cloudflare Workers                       |
-| `pnpm deploy:dry-run` | Bundle the Worker without deploying                |
-| `pnpm cf:types`       | Generate Worker binding types with `wrangler types` |
-| `pnpm build`          | Type-check the source with `tsc --noEmit`          |
-| `pnpm test`           | Run the test suite                                 |
-| `pnpm db:generate`    | Generate a migration from schema changes           |
-| `pnpm db:migrate`     | Apply pending migrations to the local/dev database |
-| `pnpm db:migrate:prod`| Apply pending migrations to production             |
-| `pnpm db:studio`      | Open Drizzle Studio for the local/dev database     |
-| `pnpm db:studio:prod` | Open Drizzle Studio for production                 |
+| Script                 | Description                                         |
+| ---------------------- | --------------------------------------------------- |
+| `pnpm dev`             | Start the Worker locally with `wrangler dev`        |
+| `pnpm deploy`          | Deploy to Cloudflare Workers                        |
+| `pnpm deploy:dry-run`  | Bundle the Worker without deploying                 |
+| `pnpm cf:types`        | Generate Worker binding types with `wrangler types` |
+| `pnpm build`           | Type-check the source with `tsc --noEmit`           |
+| `pnpm test`            | Run the test suite                                  |
+| `pnpm db:generate`     | Generate a migration from schema changes            |
+| `pnpm db:migrate`      | Apply pending migrations to the local/dev database  |
+| `pnpm db:migrate:prod` | Apply pending migrations to production              |
+| `pnpm db:studio`       | Open Drizzle Studio for the local/dev database      |
+| `pnpm db:studio:prod`  | Open Drizzle Studio for production                  |
 
 ## Endpoints
 

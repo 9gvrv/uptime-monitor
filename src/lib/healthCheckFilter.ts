@@ -15,7 +15,10 @@ function isCheckStatus(value: string): value is CheckStatus {
   return (CHECK_STATUSES as readonly string[]).includes(value);
 }
 
-function parseDate(raw: string | undefined, name: "from" | "to"): Date | undefined {
+function parseDate(
+  raw: string | undefined,
+  name: "from" | "to",
+): Date | undefined {
   if (raw === undefined || raw.trim() === "") return undefined;
 
   const date = new Date(raw);

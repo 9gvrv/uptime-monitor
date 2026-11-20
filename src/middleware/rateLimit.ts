@@ -1,6 +1,6 @@
 import type { Context, MiddlewareHandler } from "hono";
-import type { AppEnv } from "./auth.js";
 import { ApiError } from "../lib/apiError.js";
+import type { AppEnv } from "./auth.js";
 
 /** Rate limiter bindings declared in `wrangler.jsonc`. */
 export type RateLimitBinding = "DEV_RATE_LIMITER" | "AUTH_RATE_LIMITER";

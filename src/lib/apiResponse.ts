@@ -1,4 +1,3 @@
-
 interface ApiResponseOptions<T> {
   statusCode: number;
   message?: string;

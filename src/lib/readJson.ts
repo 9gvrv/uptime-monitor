@@ -10,6 +10,9 @@ export async function readJson(c: Context) {
   try {
     return await c.req.json();
   } catch {
-    throw new ApiError({ statusCode: 400, message: "Invalid or missing JSON Body" });
+    throw new ApiError({
+      statusCode: 400,
+      message: "Invalid or missing JSON Body",
+    });
   }
 }

@@ -1,9 +1,9 @@
-import type { Bindings } from '../src/config.js'
+import type { Bindings } from "../src/config.js";
 
 /** Allows every request; tests that need throttling can override with a spy. */
 const unlimitedRateLimiter = (): RateLimit => ({
   limit: async () => ({ success: true }),
-})
+});
 
 /**
  * Environment bindings used by the tests. The app now reads configuration
@@ -11,12 +11,12 @@ const unlimitedRateLimiter = (): RateLimit => ({
  * this object as the third argument.
  */
 export const TEST_ENV: Bindings = {
-  APP_NAME: 'uptime-monitor',
-  APP_VERSION: '1.0.0',
-  DATABASE_URL: 'postgresql://test:test@localhost:5432/test',
-  JWT_SECRET: 'test-jwt-secret',
-  NODE_ENV: 'test',
-  LOG_LEVEL: 'silent',
+  APP_NAME: "uptime-monitor",
+  APP_VERSION: "1.0.0",
+  DATABASE_URL: "postgresql://test:test@localhost:5432/test",
+  JWT_SECRET: "test-jwt-secret",
+  NODE_ENV: "test",
+  LOG_LEVEL: "silent",
   DEV_RATE_LIMITER: unlimitedRateLimiter(),
   AUTH_RATE_LIMITER: unlimitedRateLimiter(),
-}
+};

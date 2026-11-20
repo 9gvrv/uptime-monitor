@@ -1,4 +1,4 @@
-import { describe, test, expect, vi } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 const db = {
   execute: vi.fn(),
@@ -20,15 +20,17 @@ describe("Home", () => {
   test("GET /", async () => {
     const response = await request("/");
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({"message":{"app":"uptime-monitor","version":"1.0.0"}});
-  })
-})
+    expect(await response.json()).toEqual({
+      message: { app: "uptime-monitor", version: "1.0.0" },
+    });
+  });
+});
 
 describe("Health", () => {
   test("GET /health", async () => {
     vi.mocked(db.execute).mockResolvedValue([] as any);
-    const response = await request("/health")
-    expect(response.status).toBe(200)
-    expect(await response.json()).toEqual({ message: "OK" })
-  })
-})
+    const response = await request("/health");
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ message: "OK" });
+  });
+});

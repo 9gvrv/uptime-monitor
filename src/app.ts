@@ -1,14 +1,14 @@
-import { Hono } from "hono"
-import healthRouter from "./api/health.js"
-import router from "./api/router.js"
-import { cors } from "hono/cors"
-import { secureHeaders } from "hono/secure-headers";
+import { Hono } from "hono";
+import { cors } from "hono/cors";
 import { requestId } from "hono/request-id";
+import { secureHeaders } from "hono/secure-headers";
+import type { ContentfulStatusCode } from "hono/utils/http-status";
+import healthRouter from "./api/health.js";
+import router from "./api/router.js";
+import { getConfig } from "./config.js";
 import { ApiError } from "./lib/apiError.js";
 import { logger, setLogLevel } from "./lib/logger.js";
-import { getConfig } from "./config.js";
 import type { AppEnv } from "./middleware/auth.js";
-import type { ContentfulStatusCode } from "hono/utils/http-status";
 
 /**
  * Creates the Hono app instance with middleware and routes.
@@ -18,29 +18,31 @@ import type { ContentfulStatusCode } from "hono/utils/http-status";
  * Worker (`src/worker.ts`).
  */
 const createApp = () => {
-  const app = new Hono<AppEnv>()
+  const app = new Hono<AppEnv>();
 
   // Validate the bindings on the first request and fail with a clear error
   // (instead of a confusing downstream failure) if anything is missing.
   app.use("*", async (c, next) => {
-    const config = getConfig(c.env)
-    setLogLevel(config.log_level)
-    await next()
-  })
+    const config = getConfig(c.env);
+    setLogLevel(config.log_level);
+    await next();
+  });
 
   // Middlewares
-  app.use("*", secureHeaders())
-  app.use("*", requestId())
-  app.use("/api/*", cors({
-    origin: "*",
-    allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowHeaders: ["Content-Type", "Authorization"],
-    maxAge: 86400,
-  }))
+  app.use("*", secureHeaders());
+  app.use("*", requestId());
+  app.use(
+    "/api/*",
+    cors({
+      origin: "*",
+      allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+      allowHeaders: ["Content-Type", "Authorization"],
+      maxAge: 86400,
+    }),
+  );
 
   app.route("/", healthRouter);
   app.route("/api", router);
-
 
   app.onError((err, c) => {
     if (err instanceof ApiError) {
@@ -51,7 +53,7 @@ const createApp = () => {
           errors: err.errors,
           data: null,
         },
-        err.statusCode as ContentfulStatusCode
+        err.statusCode as ContentfulStatusCode,
       );
     }
     logger.error(err);
@@ -62,12 +64,11 @@ const createApp = () => {
         errors: [],
         data: null,
       },
-      500
+      500,
     );
   });
 
-
-  return app
-}
+  return app;
+};
 
 export default createApp;

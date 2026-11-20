@@ -1,25 +1,25 @@
 import {
   pgTable,
   serial,
+  timestamp,
   uniqueIndex,
   varchar,
-  timestamp,
-} from 'drizzle-orm/pg-core'
+} from "drizzle-orm/pg-core";
 
 export const users = pgTable(
-  'users',
+  "users",
   {
-    id: serial('id').primaryKey(),
-    email: varchar('email', { length: 255 }).notNull(),
-    passwordHash: varchar('password_hash', { length: 255 }).notNull(),
+    id: serial("id").primaryKey(),
+    email: varchar("email", { length: 255 }).notNull(),
+    passwordHash: varchar("password_hash", { length: 255 }).notNull(),
 
-    createdAt: timestamp('created_at', { withTimezone: true })
+    createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
 
-    updatedAt: timestamp('updated_at', { withTimezone: true })
+    updatedAt: timestamp("updated_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
   },
-  (table) => [uniqueIndex('ix_users_email').on(table.email)],
-)
+  (table) => [uniqueIndex("ix_users_email").on(table.email)],
+);

@@ -1,10 +1,10 @@
-import { describe, expect, it, vi } from "vitest";
 import { Hono } from "hono";
-import { rateLimit } from "../src/middleware/rateLimit.js";
-import type { AppEnv } from "../src/middleware/auth.js";
-import { ApiError } from "../src/lib/apiError.js";
-import { TEST_ENV } from "./env.js";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
+import { describe, expect, it, vi } from "vitest";
+import { ApiError } from "../src/lib/apiError.js";
+import type { AppEnv } from "../src/middleware/auth.js";
+import { rateLimit } from "../src/middleware/rateLimit.js";
+import { TEST_ENV } from "./env.js";
 
 const createApp = (
   middleware: ReturnType<typeof rateLimit>,
@@ -46,7 +46,10 @@ describe("rateLimit middleware", () => {
   it("returns a formatted 429 when the binding rejects the request", async () => {
     const { app, env } = createApp(
       rateLimit("DEV_RATE_LIMITER", "monitor:check:try"),
-      { ...TEST_ENV, DEV_RATE_LIMITER: { limit: async () => ({ success: false }) } },
+      {
+        ...TEST_ENV,
+        DEV_RATE_LIMITER: { limit: async () => ({ success: false }) },
+      },
     );
 
     const res = await app.request("/", undefined, env);
@@ -58,7 +61,10 @@ describe("rateLimit middleware", () => {
   it("uses the authenticated user id in a derived key", async () => {
     const limit = vi.fn(async () => ({ success: true }));
     const { app, env } = createApp(
-      rateLimit("AUTH_RATE_LIMITER", (c) => `monitor:check:user:${c.get("user").id}`),
+      rateLimit(
+        "AUTH_RATE_LIMITER",
+        (c) => `monitor:check:user:${c.get("user").id}`,
+      ),
       { ...TEST_ENV, AUTH_RATE_LIMITER: { limit } },
       true,
     );

@@ -6,13 +6,16 @@ import { ERROR_TYPES } from "../../lib/checkWebsite.js";
 // varchar(2048)) so validation failures never surface as database errors.
 export const monitorNameSchema = z.string().trim().min(1).max(100);
 
-export const monitorUrlSchema = z.url().max(2048).refine(
-  (value) => {
-    const { protocol } = new URL(value);
-    return protocol === "http:" || protocol === "https:";
-  },
-  { message: "Only http(s) URLs are allowed" },
-);
+export const monitorUrlSchema = z
+  .url()
+  .max(2048)
+  .refine(
+    (value) => {
+      const { protocol } = new URL(value);
+      return protocol === "http:" || protocol === "https:";
+    },
+    { message: "Only http(s) URLs are allowed" },
+  );
 
 // Scheduler settings are integer DB columns. `positive()` alone accepted
 // floats (which Postgres rejects) and absurd values; bound them here.

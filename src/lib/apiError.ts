@@ -44,7 +44,7 @@ class ApiError extends Error {
       // standard lib types used for Workers.
       const captureStackTrace = (
         Error as unknown as {
-          captureStackTrace?: (target: object, constructor?: Function) => void;
+          captureStackTrace?: (target: object, ctor?: unknown) => void;
         }
       ).captureStackTrace;
       captureStackTrace?.(this, this.constructor);

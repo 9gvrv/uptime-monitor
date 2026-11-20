@@ -16,7 +16,7 @@ export async function hashPassword(password: string) {
 
 export async function comparePassword(
   password: string,
-  hashedPassword: string
+  hashedPassword: string,
 ) {
   return bcrypt.compare(password, hashedPassword);
 }
@@ -32,7 +32,7 @@ export async function comparePassword(
  */
 export async function generateToken(
   user: { id: number; email: string },
-  jwtSecret: string
+  jwtSecret: string,
 ) {
   const now = Math.floor(Date.now() / 1000);
   const payload = {

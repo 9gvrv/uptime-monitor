@@ -1,4 +1,4 @@
-import createApp from './app.js'
+import createApp from "./app.js";
 
 /**
  * Cloudflare Worker entry point.
@@ -10,7 +10,7 @@ import createApp from './app.js'
  * Wrangler bundles and deploys this file — see `wrangler.jsonc`.
  */
 
-const app = createApp()
+const app = createApp();
 
-export { app }
-export default app
+export { app };
+export default app;

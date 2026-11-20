@@ -43,7 +43,12 @@ export function getPagination(c: Context): {
   };
 
   const page = parse(c.req.query("page"), 1, "page");
-  const limit = parse(c.req.query("limit"), DEFAULT_PAGE_SIZE, "limit", MAX_PAGE_SIZE);
+  const limit = parse(
+    c.req.query("limit"),
+    DEFAULT_PAGE_SIZE,
+    "limit",
+    MAX_PAGE_SIZE,
+  );
 
   return { page, limit, offset: (page - 1) * limit };
 }

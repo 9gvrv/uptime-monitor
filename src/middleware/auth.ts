@@ -1,6 +1,6 @@
 import type { MiddlewareHandler } from "hono";
 import { verify } from "hono/jwt";
-import { getConfig, type Bindings } from "../config.js";
+import { type Bindings, getConfig } from "../config.js";
 import { ApiError } from "../lib/apiError.js";
 
 /** The authenticated principal injected into the Hono context. */
@@ -30,10 +30,11 @@ export type AppEnv = {
  */
 export const requireAuth: MiddlewareHandler<AppEnv> = async (c, next) => {
   const header = c.req.header("Authorization");
-  if (!header || !header.startsWith("Bearer ")) {
+  if (!header?.startsWith("Bearer ")) {
     throw new ApiError({
       statusCode: 401,
-      message: "Missing or malformed Authorization header. Expected: Bearer <token>",
+      message:
+        "Missing or malformed Authorization header. Expected: Bearer <token>",
     });
   }
 

@@ -1,12 +1,20 @@
 export const ERROR_TYPES = [
-  "invalid_url", "blocked_host", "dns_failure", "timeout",
-  "network_error", "too_many_redirects", "unexpected_status",
+  "invalid_url",
+  "blocked_host",
+  "dns_failure",
+  "timeout",
+  "network_error",
+  "too_many_redirects",
+  "unexpected_status",
 ] as const;
 
 export type ErrorType = (typeof ERROR_TYPES)[number];
 
 class CheckError extends Error {
-  constructor(public type: ErrorType, message: string) {
+  constructor(
+    public type: ErrorType,
+    message: string,
+  ) {
     super(message);
   }
 }
@@ -32,14 +40,22 @@ interface CheckOptions {
 
 // URL normalizes hex/decimal IPv4 forms to dotted decimal, so this regex is enough
 function isPrivateHost(h: string): boolean {
-  if (h === "localhost" || h.endsWith(".localhost") || h.endsWith(".local") || h.endsWith(".internal"))
+  if (
+    h === "localhost" ||
+    h.endsWith(".localhost") ||
+    h.endsWith(".local") ||
+    h.endsWith(".internal")
+  )
     return true;
   if (h.startsWith("[")) return true; // reject IPv6 literals outright
   const m = h.match(/^(\d+)\.(\d+)\.\d+\.\d+$/);
   if (!m) return false;
-  const a = Number(m[1]), b = Number(m[2]);
+  const a = Number(m[1]),
+    b = Number(m[2]);
   return (
-    a === 0 || a === 10 || a === 127 ||
+    a === 0 ||
+    a === 10 ||
+    a === 127 ||
     (a === 100 && b >= 64 && b <= 127) ||
     (a === 169 && b === 254) ||
     (a === 172 && b >= 16 && b <= 31) ||
@@ -68,7 +84,10 @@ async function isNxDomain(hostname: string): Promise<boolean> {
   try {
     const res = await fetch(
       `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(hostname)}&type=A`,
-      { headers: { accept: "application/dns-json" }, signal: AbortSignal.timeout(2000) }
+      {
+        headers: { accept: "application/dns-json" },
+        signal: AbortSignal.timeout(2000),
+      },
     );
     const data = (await res.json()) as { Status: number };
     return data.Status === 3;
@@ -84,7 +103,7 @@ export async function checkWebsite(
     maxRedirects = 5,
     degradedAfterMs = 3_000,
     isExpectedStatus = (c) => c >= 200 && c < 300,
-  }: CheckOptions = {}
+  }: CheckOptions = {},
 ): Promise<CheckResult> {
   const start = performance.now();
   const signal = AbortSignal.timeout(timeoutMs);
@@ -117,13 +136,19 @@ export async function checkWebsite(
       const location = res.headers.get("location");
       if (res.status >= 300 && res.status < 400 && location) {
         if (++redirectCount > maxRedirects)
-          throw new CheckError("too_many_redirects", `More than ${maxRedirects} redirects`);
+          throw new CheckError(
+            "too_many_redirects",
+            `More than ${maxRedirects} redirects`,
+          );
         current = new URL(location, url).toString();
         continue;
       }
 
       if (!isExpectedStatus(res.status))
-        error = new CheckError("unexpected_status", `HTTP ${res.status}: ${res.statusText}`);
+        error = new CheckError(
+          "unexpected_status",
+          `HTTP ${res.status}: ${res.statusText}`,
+        );
       break;
     }
   } catch (e) {
@@ -136,7 +161,10 @@ export async function checkWebsite(
       } else if (hostname && (await isNxDomain(hostname))) {
         error = new CheckError("dns_failure", "Domain does not exist");
       } else {
-        error = new CheckError("network_error", err?.message ?? "Unknown error");
+        error = new CheckError(
+          "network_error",
+          err?.message ?? "Unknown error",
+        );
       }
     }
   }

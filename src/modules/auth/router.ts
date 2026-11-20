@@ -1,16 +1,21 @@
+import { eq } from "drizzle-orm";
 import { Hono } from "hono";
-import { signupSchema, signupReturnSchema, loginSchema, loginReturnSchema } from "./schema.js";
+import { getConfig } from "../../config.js";
+import { getDb } from "../../db/connection.js";
+import { isUniqueViolation, withRetry } from "../../db/dbUtils.js";
 import { ApiError } from "../../lib/apiError.js";
 import { ApiResponse } from "../../lib/apiResponse.js";
-import { hashPassword, comparePassword, generateToken } from "./security.js";
-import { getDb } from "../../db/connection.js";
-import { getConfig } from "../../config.js";
-import { users } from "../users/schema.js";
-import { eq } from "drizzle-orm";
-import { readJson } from "../../lib/readJson.js";
-import { isUniqueViolation, withRetry } from "../../db/dbUtils.js";
-import { requireAuth, type AppEnv } from "../../middleware/auth.js";
 import { logger } from "../../lib/logger.js";
+import { readJson } from "../../lib/readJson.js";
+import { type AppEnv, requireAuth } from "../../middleware/auth.js";
+import { users } from "../users/schema.js";
+import {
+  loginReturnSchema,
+  loginSchema,
+  signupReturnSchema,
+  signupSchema,
+} from "./schema.js";
+import { comparePassword, generateToken, hashPassword } from "./security.js";
 
 const router = new Hono<AppEnv>();
 
@@ -34,7 +39,7 @@ router.post("/signup", async (c) => {
   // Wrapped + retried: a transient Neon/network failure must not become a raw
   // non-ApiError (which onError would render as a generic 500).
   const [existingUser] = await withRetry(() =>
-    db.select().from(users).where(eq(users.email, email)).limit(1)
+    db.select().from(users).where(eq(users.email, email)).limit(1),
   );
 
   if (existingUser) {
@@ -54,7 +59,7 @@ router.post("/signup", async (c) => {
           email,
           passwordHash: hashedPassword,
         })
-        .returning()
+        .returning(),
     );
 
     // The select above catches the normal case; this unique-violation check
@@ -62,8 +67,14 @@ router.post("/signup", async (c) => {
     // Matched via SQLSTATE 23505 through the cause chain, not message text.
     const result = signupReturnSchema.safeParse(user);
     if (!result.success) {
-      logger.error({ issues: result.error.issues }, "signup return schema mismatch");
-      throw new ApiError({ statusCode: 500, message: "Signup response schema mismatch" });
+      logger.error(
+        { issues: result.error.issues },
+        "signup return schema mismatch",
+      );
+      throw new ApiError({
+        statusCode: 500,
+        message: "Signup response schema mismatch",
+      });
     }
 
     return c.json(
@@ -72,7 +83,7 @@ router.post("/signup", async (c) => {
         message: "User created successfully",
         data: result.data,
       }),
-      201
+      201,
     );
   } catch (error) {
     if (isUniqueViolation(error)) {
@@ -104,7 +115,7 @@ router.post("/login", async (c) => {
   const data = parsed.data;
 
   const [user] = await withRetry(() =>
-    db.select().from(users).where(eq(users.email, data.email)).limit(1)
+    db.select().from(users).where(eq(users.email, data.email)).limit(1),
   );
 
   // Uniform 401 for "no such user" and "wrong password" so the endpoint
@@ -116,7 +127,10 @@ router.post("/login", async (c) => {
     });
   }
 
-  const isPasswordValid = await comparePassword(data.password, user.passwordHash);
+  const isPasswordValid = await comparePassword(
+    data.password,
+    user.passwordHash,
+  );
 
   if (!isPasswordValid) {
     throw new ApiError({
@@ -133,8 +147,14 @@ router.post("/login", async (c) => {
   if (!result.success) {
     // Should be impossible while the schema matches the code — surface it
     // loudly instead of failing silently with a generic 500.
-    logger.error({ issues: result.error.issues }, "login return schema mismatch");
-    throw new ApiError({ statusCode: 500, message: "Login response schema mismatch" });
+    logger.error(
+      { issues: result.error.issues },
+      "login return schema mismatch",
+    );
+    throw new ApiError({
+      statusCode: 500,
+      message: "Login response schema mismatch",
+    });
   }
 
   return c.json(
@@ -143,10 +163,9 @@ router.post("/login", async (c) => {
       message: "Login successful",
       data: result.data,
     }),
-    200
+    200,
   );
 });
-
 
 /** GET /api/v1/auth/me — returns the currently authenticated user. */
 router.get("/me", requireAuth, async (c) => {
@@ -162,7 +181,7 @@ router.get("/me", requireAuth, async (c) => {
       })
       .from(users)
       .where(eq(users.id, id))
-      .limit(1)
+      .limit(1),
   );
 
   // The token is valid but the row is gone (deleted after issuing).
@@ -179,7 +198,7 @@ router.get("/me", requireAuth, async (c) => {
       message: "Authenticated user",
       data: user,
     }),
-    200
+    200,
   );
 });
 
