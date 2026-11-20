@@ -18,7 +18,7 @@ import {
 import { getPagination } from "../../lib/pagination.js";
 import { ApiError } from "../../lib/apiError.js";
 import { isUniqueViolation, withRetry } from "../../db/dbUtils.js";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc, sql, gte } from "drizzle-orm";
 import { monitors, healthChecks } from "./schema.js";
 import { groups } from "../groups/schema.js";
 
@@ -205,6 +205,10 @@ router.put("/:id", requireAuth, async (c) => {
   }))
 })
 
+
+/**
+ * Update the group of a monitor.
+ */
 router.put("/:id/group", requireAuth, async (c) => {
   logger.info("PUT /monitors/:id/group");
   const db = getDb(getConfig(c.env).database_url);
@@ -315,7 +319,7 @@ router.post("/:id/check", requireAuth, rateLimit(20, 60000), async (c) => {
     throw new ApiError({ statusCode: 404, message: "Monitor not found" });
   }
 
-  const websiteCheckResult = await withRetry(() => checkWebsite(monitor.url))
+  const websiteCheckResult = await checkWebsite(monitor.url);
   if (!websiteCheckResult) {
     throw new ApiError({ statusCode: 500, message: "Failed to check website" });
   }
@@ -372,7 +376,9 @@ router.get("/:id/check", requireAuth, async (c) => {
   const healthChecksResult = await withRetry(() =>
     db.select().from(healthChecks).where(eq(healthChecks.monitorId, id))
     .offset(offset)
-    .limit(limit)
+      .limit(limit)
+      .orderBy(desc(healthChecks.checkedAt), desc(healthChecks.id))
+
   )
 
   return c.json(new ApiResponse({
@@ -400,14 +406,42 @@ router.get("/:id/summary", requireAuth, async (c) => {
     .limit(1)
   )
 
+  const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
   const overallStatus = await withRetry(() =>
-    db.select({
-      averageTtfbMs: sql<number>`avg(${healthChecks.ttfbMs})`,
-      averageTotalMs: sql<number>`avg(${healthChecks.totalMs})`,
+    db
+      .select({
+        averageTtfbMs: sql<number>`cast(avg(${healthChecks.ttfbMs}) as float8)`,
+        averageTotalMs: sql<number>`cast(avg(${healthChecks.totalMs}) as float8)`,
+      })
+      .from(healthChecks)
+      .where(
+        and(
+          eq(healthChecks.monitorId, id),
+          gte(healthChecks.checkedAt, twentyFourHoursAgo)
+        )
+      )
+  );
+
+  const uptime24h = await db
+    .select({
+      totalChecks: sql<number>`count(*)::int`,
+      upChecks: sql<number>`
+        count(*) filter (where ${healthChecks.status} = 'up')::int
+      `,
     })
     .from(healthChecks)
-    .where(eq(healthChecks.monitorId, id))
-  )
+    .where(
+      and(
+        eq(healthChecks.monitorId, id),
+        gte(healthChecks.checkedAt, twentyFourHoursAgo)
+      )
+    );
+
+  const { totalChecks, upChecks } = uptime24h[0];
+
+  const uptimePercentage =
+    totalChecks === 0 ? null : (upChecks / totalChecks) * 100;
 
   return c.json(new ApiResponse({
     statusCode: 200,
@@ -415,7 +449,9 @@ router.get("/:id/summary", requireAuth, async (c) => {
     data: {
       lastHealthCheckInfo: lastHealthCheckInfo[0],
       overallStatus: overallStatus[0],
+      uptimePercentage,
     },
+
   }))
 })
 
