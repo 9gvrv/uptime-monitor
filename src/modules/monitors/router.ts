@@ -17,8 +17,9 @@ import {
 } from "./validationSchema.js";
 import { getPagination } from "../../lib/pagination.js";
 import { ApiError } from "../../lib/apiError.js";
+import { getHealthCheckFilter } from "../../lib/healthCheckFilter.js";
 import { isUniqueViolation, withRetry } from "../../db/dbUtils.js";
-import { eq, and, desc, sql, gte } from "drizzle-orm";
+import { eq, and, desc, sql, gte, lte } from "drizzle-orm";
 import { monitors, healthChecks } from "./schema.js";
 import { groups } from "../groups/schema.js";
 
@@ -80,7 +81,6 @@ router.post("/", requireAuth, async (c) => {
   if (!parsed.success) throw new ApiError({ statusCode: 400, message: parsed.error.message });
 
   const { name, url, interval_seconds, timeout_ms } = parsed.data;
-  console.log(`Registering monitor: name=${name}, url=${url}, interval_seconds=${interval_seconds}, timeout_ms=${timeout_ms}`)
 
   const [existingMonitor] = await withRetry(() => db.select().from(monitors).where(and(eq(monitors.url, url), eq(monitors.userId, id))).limit(1));
   if (existingMonitor) {
@@ -92,14 +92,20 @@ router.post("/", requireAuth, async (c) => {
 
   try {
     const [inserted] = await withRetry(() =>
-      db.insert(monitors).values({ userId: id, name, url, interval_seconds, timeout_ms }).returning()
+      db.insert(monitors).values({
+        userId: id,
+        name,
+        url,
+        // undefined lets the database default apply.
+        ...(interval_seconds !== undefined && { interval_seconds }),
+        ...(timeout_ms !== undefined && { timeout_ms }),
+      }).returning()
     );
 
     if (!inserted) throw new ApiError({ statusCode: 500, message: "Failed to create monitor" });
-    console.timeLog(`Monitor created: id=${inserted.id}, name=${name}, url=${url}, interval_seconds=${interval_seconds}, timeout_ms=${timeout_ms}`)
 
-    // Parse through the *response* schema, not the input schema: the input
-    // schema only knows {name, url} and would strip the generated `id`.
+    // Return the inserted row through the response schema so the generated
+    // `id` and the DB defaults for interval/timeout are included.
     const result = ReturnMonitor.parse(inserted);
     return c.json(new ApiResponse({
       statusCode: 201,
@@ -161,6 +167,8 @@ router.put("/:id", requireAuth, async (c) => {
     name?: string;
     url?: string;
     isActive?: boolean;
+    interval_seconds?: number;
+    timeout_ms?: number;
     updatedAt?: Date;
   } = {
     ...(name !== undefined && { name }),
@@ -323,7 +331,10 @@ router.post("/:id/check", requireAuth, rateLimit(20, 60000), async (c) => {
     throw new ApiError({ statusCode: 404, message: "Monitor not found" });
   }
 
-  const websiteCheckResult = await checkWebsite(monitor.url);
+  // Use the per-monitor timeout that is now stored on the row.
+  const websiteCheckResult = await checkWebsite(monitor.url, {
+    timeoutMs: monitor.timeout_ms,
+  });
   if (!websiteCheckResult) {
     throw new ApiError({ statusCode: 500, message: "Failed to check website" });
   }
@@ -370,26 +381,58 @@ router.post("/:id/check", requireAuth, rateLimit(20, 60000), async (c) => {
 router.get("/:id/check", requireAuth, async (c) => {
   logger.info("GET /monitors/:id/check")
   const db = getDb(getConfig(c.env).database_url);
-  const id = Number(c.req.param().id);
-  const { limit, offset } = getPagination(c);
+  const id = Number(c.req.param("id"));
 
-  const monitorName = await withRetry(() =>
-    db.select({ name: monitors.name }).from(monitors).where(eq(monitors.id, id))
+  if (!Number.isInteger(id) || id <= 0) {
+    throw new ApiError({ statusCode: 400, message: "Invalid monitor ID" });
+  }
+
+  const { limit, offset } = getPagination(c);
+  const { status, from, to } = getHealthCheckFilter(c);
+
+  // A valid token is not enough — the monitor must belong to this user.
+  const [monitor] = await withRetry(() =>
+    db.select({ name: monitors.name })
+      .from(monitors)
+      .where(and(
+        eq(monitors.id, id),
+        eq(monitors.userId, c.get("user").id),
+      ))
+      .limit(1)
   )
+
+  if (!monitor) throw new ApiError({ statusCode: 404, message: "Monitor not found" });
 
   const healthChecksResult = await withRetry(() =>
-    db.select().from(healthChecks).where(eq(healthChecks.monitorId, id))
-    .offset(offset)
+    db.select()
+      .from(healthChecks)
+      .where(
+        and(
+          eq(healthChecks.monitorId, id),
+          status !== undefined
+            ? eq(healthChecks.status, status)
+            : undefined,
+          from !== undefined
+            ? gte(healthChecks.checkedAt, from)
+            : undefined,
+          to !== undefined
+            ? lte(healthChecks.checkedAt, to)
+            : undefined,
+        )
+      )
+      .orderBy(
+        desc(healthChecks.checkedAt),
+        desc(healthChecks.id)
+      )
+      .offset(offset)
       .limit(limit)
-      .orderBy(desc(healthChecks.checkedAt), desc(healthChecks.id))
-
-  )
+  );
 
   return c.json(new ApiResponse({
     statusCode: 200,
     message: "Health checks",
     data: {
-      name: monitorName[0]?.name,
+      name: monitor.name,
       healthChecks: healthChecksResult,
     },
   }))
@@ -398,7 +441,24 @@ router.get("/:id/check", requireAuth, async (c) => {
 router.get("/:id/summary", requireAuth, async (c) => {
   logger.info("GET /monitors/:id/summary")
   const db = getDb(getConfig(c.env).database_url);
-  const id = Number(c.req.param().id);
+  const id = Number(c.req.param("id"));
+
+  if (!Number.isInteger(id) || id <= 0) {
+    throw new ApiError({ statusCode: 400, message: "Invalid monitor ID" });
+  }
+
+  // Same ownership rule as every other monitor-scoped route.
+  const [monitor] = await withRetry(() =>
+    db.select({ id: monitors.id })
+      .from(monitors)
+      .where(and(
+        eq(monitors.id, id),
+        eq(monitors.userId, c.get("user").id),
+      ))
+      .limit(1)
+  )
+
+  if (!monitor) throw new ApiError({ statusCode: 404, message: "Monitor not found" });
 
   const lastHealthCheckInfo = await withRetry(() =>
     db.select({
@@ -406,7 +466,7 @@ router.get("/:id/summary", requireAuth, async (c) => {
       statusCode: healthChecks.statusCode,
       checkedAt: healthChecks.checkedAt,
     }).from(healthChecks).where(eq(healthChecks.monitorId, id))
-    .orderBy(desc(healthChecks.checkedAt))
+    .orderBy(desc(healthChecks.checkedAt), desc(healthChecks.id))
     .limit(1)
   )
 
@@ -427,8 +487,8 @@ router.get("/:id/summary", requireAuth, async (c) => {
       )
   );
 
-  const uptime24h = await db
-    .select({
+  const uptime24h = await withRetry(() =>
+    db.select({
       totalChecks: sql<number>`count(*)::int`,
       upChecks: sql<number>`
         count(*) filter (where ${healthChecks.status} = 'up')::int
@@ -440,9 +500,10 @@ router.get("/:id/summary", requireAuth, async (c) => {
         eq(healthChecks.monitorId, id),
         gte(healthChecks.checkedAt, twentyFourHoursAgo)
       )
-    );
+    )
+  );
 
-  const { totalChecks, upChecks } = uptime24h[0];
+  const { totalChecks, upChecks } = uptime24h[0] ?? { totalChecks: 0, upChecks: 0 };
 
   const uptimePercentage =
     totalChecks === 0 ? null : (upChecks / totalChecks) * 100;
@@ -451,8 +512,8 @@ router.get("/:id/summary", requireAuth, async (c) => {
     statusCode: 200,
     message: "Overall status",
     data: {
-      lastHealthCheckInfo: lastHealthCheckInfo[0],
-      overallStatus: overallStatus[0],
+      lastHealthCheckInfo: lastHealthCheckInfo[0] ?? null,
+      overallStatus: overallStatus[0] ?? null,
       uptimePercentage,
     },
 
