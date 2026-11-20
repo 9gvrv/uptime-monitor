@@ -205,7 +205,7 @@ describe("POST /api/v1/auth/login", () => {
     const payload = decodeJwtPayload(body.data.token);
     expect(payload.sub).toBe("1"); // user id as `sub`
     expect(payload.email).toBe(EMAIL);
-    expect(payload.exp - payload.iat).toBe(60 * 60); // exp in SECONDS, 1h TTL
+    expect(payload.exp - payload.iat).toBe(60 * 60 * 24); // exp in SECONDS, 24h TTL
   });
 
   test("returns a uniform 401 for an unknown email", async () => {
