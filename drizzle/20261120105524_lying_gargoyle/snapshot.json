@@ -1,0 +1,81 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "aafbe684-87ed-4e0a-b574-583e4c6cddc3",
+  "prevIds": [
+    "2eb06fea-1f15-4671-b7f2-248a009bbe4d"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "monitors",
+        "interval_seconds"
+      ],
+      "writes": [
+        "s|col|public.monitors.interval_seconds",
+        "n|col|public.monitors.interval_seconds",
+        "e|col|public.monitors.interval_seconds"
+      ],
+      "reads": [
+        "n|tbl|public.monitors",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "monitors",
+        "timeout_ms"
+      ],
+      "writes": [
+        "s|col|public.monitors.timeout_ms",
+        "n|col|public.monitors.timeout_ms",
+        "e|col|public.monitors.timeout_ms"
+      ],
+      "reads": [
+        "n|tbl|public.monitors",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "monitors",
+        "name": "interval_seconds",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "300",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "monitors",
+        "name": "timeout_ms",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "5000",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

@@ -79,7 +79,8 @@ router.post("/", requireAuth, async (c) => {
   const parsed = registerMonitorSchema.safeParse(body);
   if (!parsed.success) throw new ApiError({ statusCode: 400, message: parsed.error.message });
 
-  const { name, url } = parsed.data;
+  const { name, url, interval_seconds, timeout_ms } = parsed.data;
+  console.log(`Registering monitor: name=${name}, url=${url}, interval_seconds=${interval_seconds}, timeout_ms=${timeout_ms}`)
 
   const [existingMonitor] = await withRetry(() => db.select().from(monitors).where(and(eq(monitors.url, url), eq(monitors.userId, id))).limit(1));
   if (existingMonitor) {
@@ -91,10 +92,11 @@ router.post("/", requireAuth, async (c) => {
 
   try {
     const [inserted] = await withRetry(() =>
-      db.insert(monitors).values({ userId: id, name, url }).returning()
+      db.insert(monitors).values({ userId: id, name, url, interval_seconds, timeout_ms }).returning()
     );
 
     if (!inserted) throw new ApiError({ statusCode: 500, message: "Failed to create monitor" });
+    console.timeLog(`Monitor created: id=${inserted.id}, name=${name}, url=${url}, interval_seconds=${interval_seconds}, timeout_ms=${timeout_ms}`)
 
     // Parse through the *response* schema, not the input schema: the input
     // schema only knows {name, url} and would strip the generated `id`.
@@ -154,7 +156,7 @@ router.put("/:id", requireAuth, async (c) => {
 
   // The schema drops unknown keys, so callers cannot change userId, id,
   // groupId or timestamps through this route. Only supplied fields are set.
-  const { name, url, isActive } = parsed.data;
+  const { name, url, isActive, interval_seconds, timeout_ms } = parsed.data;
   const updates: {
     name?: string;
     url?: string;
@@ -164,6 +166,8 @@ router.put("/:id", requireAuth, async (c) => {
     ...(name !== undefined && { name }),
     ...(url !== undefined && { url }),
     ...(isActive !== undefined && { isActive }),
+    ...(interval_seconds !== undefined && { interval_seconds }),
+    ...(timeout_ms !== undefined && { timeout_ms }),
   };
 
   if (Object.keys(updates).length === 0) {

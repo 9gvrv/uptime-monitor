@@ -8,7 +8,7 @@ import { sign } from "hono/jwt";
  */
 
 const SALT_ROUNDS = 4;
-const TOKEN_TTL_SECONDS = 60 * 60; // 1 hour
+const TOKEN_TTL_SECONDS = 60 * 60 * 24; // 1 hour
 
 export async function hashPassword(password: string) {
   return bcrypt.hash(password, SALT_ROUNDS);

@@ -19,12 +19,16 @@ export const monitorUrlSchema = z.url().max(2048).refine(
 export const registerMonitorSchema = z.object({
   name: monitorNameSchema,
   url: monitorUrlSchema,
+  interval_seconds: z.number().positive().optional(),
+  timeout_ms: z.number().positive().optional(),
 });
 
 // Input schema for updating a monitor. Only known fields are accepted, so a
 // caller cannot change userId, id, groupId or timestamps through this route.
 export const updateMonitorSchema = registerMonitorSchema.partial().extend({
   isActive: z.boolean().optional(),
+  interval_seconds: z.number().positive().optional(),
+  timeout_ms: z.number().positive().optional(),
 });
 
 // Response schema for a monitor. Kept separate from the input schema so the
@@ -35,6 +39,8 @@ export const ReturnMonitor = z.object({
   url: z.string().url(),
   isActive: z.boolean(),
   groupId: z.number().positive().nullable(),
+  interval_seconds: z.number().positive(),
+  timeout_ms: z.number().positive(),
   createdAt: z.date(),
   updatedAt: z.date(),
 });

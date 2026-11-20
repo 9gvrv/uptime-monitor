@@ -35,6 +35,8 @@ export const monitors = pgTable(
     name: varchar('name', { length: 100 }).notNull(),
     url: varchar('url', { length: 2048 }).notNull(),
     isActive: boolean('is_active').default(true).notNull(),
+    interval_seconds: integer('interval_seconds').default(300).notNull(),
+    timeout_ms: integer('timeout_ms').default(5000).notNull(),
 
     createdAt: timestamp('created_at', { withTimezone: true })
       .defaultNow()
