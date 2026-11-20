@@ -18,7 +18,7 @@ import {
 import { getPagination } from "../../lib/pagination.js";
 import { ApiError } from "../../lib/apiError.js";
 import { isUniqueViolation, withRetry } from "../../db/dbUtils.js";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 import { monitors, healthChecks } from "./schema.js";
 import { groups } from "../groups/schema.js";
 
@@ -31,24 +31,16 @@ router.get("/", requireAuth, async (c) => {
   const { limit, offset } = getPagination(c);
 
   const monitor = await withRetry(() =>
-    db.select({
-      id: monitors.id,
-      name: monitors.name,
-      url: monitors.url,
-      isActive: monitors.isActive,
-      groupId: monitors.groupId,
-      createdAt: monitors.createdAt,
-      updatedAt: monitors.updatedAt,
-    }).from(monitors).where(eq(monitors.userId, id))
+    db.select().from(monitors).where(eq(monitors.userId, id))
     .offset(offset)
     .limit(limit)
   )
 
-  return c.json(new ApiResponse({
-    statusCode: 200,
-    message: "Monitors",
-    data: monitor,
-  }))
+    return c.json(new ApiResponse({
+      statusCode: 200,
+      message: "Monitors",
+      data: monitor,
+    }))
 });
 
 router.get("/:id", requireAuth, async (c) => {
