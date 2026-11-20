@@ -286,7 +286,7 @@ router.put("/:id/group", requireAuth, async (c) => {
   }))
 })
 
-router.post("/check/try", rateLimit(), async (c) => {
+router.post("/check/try", rateLimit("DEV_RATE_LIMITER", "monitor:check:try"), async (c) => {
   const body = await readJson(c);
 
   const parsed = freeHealthCheckSchema.safeParse(body);
@@ -308,74 +308,78 @@ router.post("/check/try", rateLimit(), async (c) => {
   }))
 })
 
-router.post("/:id/check", requireAuth, rateLimit(20, 60000), async (c) => {
-  const db = getDb(getConfig(c.env).database_url);
-  const id = Number(c.req.param("id"));
+router.post(
+  "/:id/check",
+  requireAuth,
+  rateLimit("AUTH_RATE_LIMITER", (c) => `monitor:check:user:${c.get("user").id}`),
+  async (c) => {
+    const db = getDb(getConfig(c.env).database_url);
+    const id = Number(c.req.param("id"));
 
-  if (!id) {
-    throw new ApiError({ statusCode: 400, message: "Invalid monitor ID" });
-  }
+    if (!id) {
+      throw new ApiError({ statusCode: 400, message: "Invalid monitor ID" });
+    }
 
-  const [monitor] = await withRetry(() => db
-    .select()
-    .from(monitors)
-    .where(
-      and(
-        eq(monitors.id, id),
-        eq(monitors.userId, c.get("user").id)
+    const [monitor] = await withRetry(() => db
+      .select()
+      .from(monitors)
+      .where(
+        and(
+          eq(monitors.id, id),
+          eq(monitors.userId, c.get("user").id)
+        )
       )
-    )
-    .limit(1))
+      .limit(1))
 
-  if (!monitor) {
-    throw new ApiError({ statusCode: 404, message: "Monitor not found" });
-  }
+    if (!monitor) {
+      throw new ApiError({ statusCode: 404, message: "Monitor not found" });
+    }
 
-  // Use the per-monitor timeout that is now stored on the row.
-  const websiteCheckResult = await checkWebsite(monitor.url, {
-    timeoutMs: monitor.timeoutMs,
-  });
-  if (!websiteCheckResult) {
-    throw new ApiError({ statusCode: 500, message: "Failed to check website" });
-  }
+    // Use the per-monitor timeout that is now stored on the row.
+    const websiteCheckResult = await checkWebsite(monitor.url, {
+      timeoutMs: monitor.timeoutMs,
+    });
+    if (!websiteCheckResult) {
+      throw new ApiError({ statusCode: 500, message: "Failed to check website" });
+    }
 
-  const {
-    status,
-    statusCode,
-    finalUrl,
-    redirectCount,
-    timings,
-    error,
-  } = websiteCheckResult;
-
-  const [healthCheck] = await withRetry(() => db
-    .insert(healthChecks)
-    .values({
-      monitorId: id,
+    const {
       status,
       statusCode,
       finalUrl,
       redirectCount,
-      ttfbMs: timings.ttfbMs,
-      totalMs: timings.totalMs,
-      errorType: error?.type ?? null,
-      errorMessage: error?.message ?? null,
-    }).returning())
+      timings,
+      error,
+    } = websiteCheckResult;
 
-  if (!healthCheck) {
-    throw new ApiError({ statusCode: 500, message: "Failed to save health check" });
-  }
-  const parsed = ReturnHealthCheck.safeParse(healthCheck);
-  if (!parsed.success) {
-    throw new ApiError({ statusCode: 500, message: "Failed to parse health check" });
-  }
+    const [healthCheck] = await withRetry(() => db
+      .insert(healthChecks)
+      .values({
+        monitorId: id,
+        status,
+        statusCode,
+        finalUrl,
+        redirectCount,
+        ttfbMs: timings.ttfbMs,
+        totalMs: timings.totalMs,
+        errorType: error?.type ?? null,
+        errorMessage: error?.message ?? null,
+      }).returning())
+
+    if (!healthCheck) {
+      throw new ApiError({ statusCode: 500, message: "Failed to save health check" });
+    }
+    const parsed = ReturnHealthCheck.safeParse(healthCheck);
+    if (!parsed.success) {
+      throw new ApiError({ statusCode: 500, message: "Failed to parse health check" });
+    }
 
 
-  return c.json(new ApiResponse({
-    statusCode: 200,
-    message: "Health check completed",
-    data: parsed.data,
-  }))
+    return c.json(new ApiResponse({
+      statusCode: 200,
+      message: "Health check completed",
+      data: parsed.data,
+    }))
 })
 
 router.get("/:id/check", requireAuth, async (c) => {

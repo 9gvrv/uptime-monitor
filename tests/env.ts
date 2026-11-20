@@ -1,5 +1,10 @@
 import type { Bindings } from '../src/config.js'
 
+/** Allows every request; tests that need throttling can override with a spy. */
+const unlimitedRateLimiter = (): RateLimit => ({
+  limit: async () => ({ success: true }),
+})
+
 /**
  * Environment bindings used by the tests. The app now reads configuration
  * from `c.env` (Workers bindings style), so every `app.request(...)` passes
@@ -12,4 +17,6 @@ export const TEST_ENV: Bindings = {
   JWT_SECRET: 'test-jwt-secret',
   NODE_ENV: 'test',
   LOG_LEVEL: 'silent',
+  DEV_RATE_LIMITER: unlimitedRateLimiter(),
+  AUTH_RATE_LIMITER: unlimitedRateLimiter(),
 }
