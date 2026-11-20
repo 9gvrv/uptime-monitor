@@ -80,7 +80,7 @@ router.post("/", requireAuth, async (c) => {
   const parsed = registerMonitorSchema.safeParse(body);
   if (!parsed.success) throw new ApiError({ statusCode: 400, message: parsed.error.message });
 
-  const { name, url, interval_seconds, timeout_ms } = parsed.data;
+  const { name, url, intervalSeconds, timeoutMs } = parsed.data;
 
   const [existingMonitor] = await withRetry(() => db.select().from(monitors).where(and(eq(monitors.url, url), eq(monitors.userId, id))).limit(1));
   if (existingMonitor) {
@@ -97,8 +97,8 @@ router.post("/", requireAuth, async (c) => {
         name,
         url,
         // undefined lets the database default apply.
-        ...(interval_seconds !== undefined && { interval_seconds }),
-        ...(timeout_ms !== undefined && { timeout_ms }),
+        ...(intervalSeconds !== undefined && { intervalSeconds }),
+        ...(timeoutMs !== undefined && { timeoutMs }),
       }).returning()
     );
 
@@ -162,20 +162,20 @@ router.put("/:id", requireAuth, async (c) => {
 
   // The schema drops unknown keys, so callers cannot change userId, id,
   // groupId or timestamps through this route. Only supplied fields are set.
-  const { name, url, isActive, interval_seconds, timeout_ms } = parsed.data;
+  const { name, url, isActive, intervalSeconds, timeoutMs } = parsed.data;
   const updates: {
     name?: string;
     url?: string;
     isActive?: boolean;
-    interval_seconds?: number;
-    timeout_ms?: number;
+    intervalSeconds?: number;
+    timeoutMs?: number;
     updatedAt?: Date;
   } = {
     ...(name !== undefined && { name }),
     ...(url !== undefined && { url }),
     ...(isActive !== undefined && { isActive }),
-    ...(interval_seconds !== undefined && { interval_seconds }),
-    ...(timeout_ms !== undefined && { timeout_ms }),
+    ...(intervalSeconds !== undefined && { intervalSeconds }),
+    ...(timeoutMs !== undefined && { timeoutMs }),
   };
 
   if (Object.keys(updates).length === 0) {
@@ -333,7 +333,7 @@ router.post("/:id/check", requireAuth, rateLimit(20, 60000), async (c) => {
 
   // Use the per-monitor timeout that is now stored on the row.
   const websiteCheckResult = await checkWebsite(monitor.url, {
-    timeoutMs: monitor.timeout_ms,
+    timeoutMs: monitor.timeoutMs,
   });
   if (!websiteCheckResult) {
     throw new ApiError({ statusCode: 500, message: "Failed to check website" });

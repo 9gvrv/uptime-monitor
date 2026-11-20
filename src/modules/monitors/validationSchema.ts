@@ -24,8 +24,8 @@ export const timeoutMsSchema = z.number().int().min(100).max(60_000);
 export const registerMonitorSchema = z.object({
   name: monitorNameSchema,
   url: monitorUrlSchema,
-  interval_seconds: intervalSecondsSchema.optional(),
-  timeout_ms: timeoutMsSchema.optional(),
+  intervalSeconds: intervalSecondsSchema.optional(),
+  timeoutMs: timeoutMsSchema.optional(),
 });
 
 // Input schema for updating a monitor. Only known fields are accepted, so a
@@ -42,8 +42,8 @@ export const ReturnMonitor = z.object({
   url: z.string().url(),
   isActive: z.boolean(),
   groupId: z.number().positive().nullable(),
-  interval_seconds: intervalSecondsSchema,
-  timeout_ms: timeoutMsSchema,
+  intervalSeconds: intervalSecondsSchema,
+  timeoutMs: timeoutMsSchema,
   createdAt: z.date(),
   updatedAt: z.date(),
 });
