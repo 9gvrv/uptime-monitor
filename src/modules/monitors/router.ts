@@ -359,5 +359,67 @@ router.post("/:id/check", requireAuth, rateLimit(20, 60000), async (c) => {
   }))
 })
 
+router.get("/:id/check", requireAuth, async (c) => {
+  logger.info("GET /monitors/:id/check")
+  const db = getDb(getConfig(c.env).database_url);
+  const id = Number(c.req.param().id);
+  const { limit, offset } = getPagination(c);
+
+  const monitorName = await withRetry(() =>
+    db.select({ name: monitors.name }).from(monitors).where(eq(monitors.id, id))
+  )
+
+  const healthChecksResult = await withRetry(() =>
+    db.select().from(healthChecks).where(eq(healthChecks.monitorId, id))
+    .offset(offset)
+    .limit(limit)
+  )
+
+  return c.json(new ApiResponse({
+    statusCode: 200,
+    message: "Health checks",
+    data: {
+      name: monitorName[0]?.name,
+      healthChecks: healthChecksResult,
+    },
+  }))
+})
+
+router.get("/:id/summary", requireAuth, async (c) => {
+  logger.info("GET /monitors/:id/summary")
+  const db = getDb(getConfig(c.env).database_url);
+  const id = Number(c.req.param().id);
+
+  const lastHealthCheckInfo = await withRetry(() =>
+    db.select({
+      status: healthChecks.status,
+      statusCode: healthChecks.statusCode,
+      checkedAt: healthChecks.checkedAt,
+    }).from(healthChecks).where(eq(healthChecks.monitorId, id))
+    .orderBy(desc(healthChecks.checkedAt))
+    .limit(1)
+  )
+
+  const overallStatus = await withRetry(() =>
+    db.select({
+      averageTtfbMs: sql<number>`avg(${healthChecks.ttfbMs})`,
+      averageTotalMs: sql<number>`avg(${healthChecks.totalMs})`,
+    })
+    .from(healthChecks)
+    .where(eq(healthChecks.monitorId, id))
+  )
+
+  return c.json(new ApiResponse({
+    statusCode: 200,
+    message: "Overall status",
+    data: {
+      lastHealthCheckInfo: lastHealthCheckInfo[0],
+      overallStatus: overallStatus[0],
+    },
+  }))
+})
+
+
+
 
 export default router;
