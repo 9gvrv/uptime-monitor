@@ -1,0 +1,125 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "93e9d431-cb97-476c-938f-f2354c8899b3",
+  "prevIds": [
+    "aafbe684-87ed-4e0a-b574-583e4c6cddc3"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "monitors",
+        "next_check_at"
+      ],
+      "writes": [
+        "s|col|public.monitors.next_check_at",
+        "n|col|public.monitors.next_check_at",
+        "e|col|public.monitors.next_check_at"
+      ],
+      "reads": [
+        "n|tbl|public.monitors",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "monitors",
+        "last_checked_at"
+      ],
+      "writes": [
+        "s|col|public.monitors.last_checked_at",
+        "n|col|public.monitors.last_checked_at",
+        "e|col|public.monitors.last_checked_at"
+      ],
+      "reads": [
+        "n|tbl|public.monitors",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "monitors",
+        "ix_monitors_next_check_at"
+      ],
+      "writes": [
+        "s|idx|public.ix_monitors_next_check_at",
+        "n|idx|public.ix_monitors_next_check_at",
+        "e|idx|public.ix_monitors_next_check_at",
+        "n|rel|public.ix_monitors_next_check_at"
+      ],
+      "reads": [
+        "n|tbl|public.monitors",
+        "n|sch|public",
+        "n|col|public.monitors.next_check_at"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "monitors",
+        "name": "next_check_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "monitors",
+        "name": "last_checked_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "monitors",
+        "name": "ix_monitors_next_check_at",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "next_check_at",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    }
+  ]
+}

@@ -47,6 +47,8 @@ export const ReturnMonitor = z.object({
   groupId: z.number().positive().nullable(),
   intervalSeconds: intervalSecondsSchema,
   timeoutMs: timeoutMsSchema,
+  nextCheckAt: z.date(),
+  lastCheckedAt: z.date().nullable(),
   createdAt: z.date(),
   updatedAt: z.date(),
 });

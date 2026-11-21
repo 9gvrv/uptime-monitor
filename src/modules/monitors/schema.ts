@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   boolean,
   index,
@@ -38,6 +39,14 @@ export const monitors = pgTable(
     intervalSeconds: integer("interval_seconds").default(300).notNull(),
     timeoutMs: integer("timeout_ms").default(5000).notNull(),
 
+    // Scheduling state used by the cron handler. New monitors are due right
+    // away; after every check the runner pushes nextCheckAt out by one
+    // interval and records when the check actually happened.
+    nextCheckAt: timestamp("next_check_at", { withTimezone: true })
+      .default(sql`now()`)
+      .notNull(),
+    lastCheckedAt: timestamp("last_checked_at", { withTimezone: true }),
+
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -49,6 +58,8 @@ export const monitors = pgTable(
   (table) => [
     index("ix_monitors_user_id").on(table.userId),
     index("ix_monitors_group_id").on(table.groupId),
+    // The cron query filters on next_check_at <= now() and orders by it.
+    index("ix_monitors_next_check_at").on(table.nextCheckAt),
     // Enforce one monitor per URL per user at the database level. The
     // SELECT-then-INSERT check in the POST route is only a friendly pre-check;
     // this constraint is what actually prevents duplicates under concurrency.

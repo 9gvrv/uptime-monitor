@@ -169,9 +169,11 @@ Never drop/recreate production tables to work around this.
 
 ```
 src/
-  worker.ts             Cloudflare Worker entry point
+  worker.ts             Cloudflare Worker entry point (fetch + scheduled)
   app.ts                Hono app (middleware + routes)
+  cron.ts               scheduled handler: due monitors -> runMonitorCheck
   config.ts             env/bindings validation (zod)
+  lib/runMonitorCheck.ts  shared check flow (fetch -> insert -> reschedule)
   lib/logger.ts         Worker-compatible JSON logger
   db/connection.ts      lazily-cached Drizzle client (Neon HTTP)
   db/dbUtils.ts         retry/error helpers
@@ -186,7 +188,10 @@ wrangler.jsonc          Worker config (entry, vars, rate limiting, compatibility
 
 ### Runtime
 
-`src/worker.ts` is the only entry point. It exports the Hono app, and Wrangler
-serves it through Workerd both locally and in production. Configuration and
-bindings are read from `c.env`, and the rate limiter uses the
-`FREE_RATE_LIMITER` binding from `wrangler.jsonc`.
+`src/worker.ts` is the only entry point. Its default export handles both HTTP
+traffic (through the Hono app) and the `scheduled` cron trigger declared in
+`wrangler.jsonc` (`* * * * *`). Each tick loads the active monitors whose
+`next_check_at` has passed and runs them through `runMonitorCheck` — the same
+runner used by `POST /api/v1/monitors/:id/check`. That runner also advances
+`next_check_at` by the monitor's `interval_seconds` and sets `last_checked_at`.
+Configuration and bindings are read from `env`/`c.env`.

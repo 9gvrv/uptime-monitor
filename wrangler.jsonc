@@ -44,6 +44,12 @@
     "enabled": true
   },
 
+  // Each tick checks the monitors whose next_check_at has passed. The runner
+  // reschedules them, so a monitor is only checked as often as its interval.
+  "triggers": {
+    "crons": ["* * * * *"]
+  },
+
   // Non-secret configuration. Secrets (DATABASE_URL, JWT_SECRET) are set with
   // `wrangler secret put <NAME>` and are NOT stored in this file.
   "vars": {

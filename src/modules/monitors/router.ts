@@ -10,13 +10,13 @@ import { getHealthCheckFilter } from "../../lib/healthCheckFilter.js";
 import { logger } from "../../lib/logger.js";
 import { getPagination } from "../../lib/pagination.js";
 import { readJson } from "../../lib/readJson.js";
+import { runMonitorCheck } from "../../lib/runMonitorCheck.js";
 import { type AppEnv, requireAuth } from "../../middleware/auth.js";
 import { rateLimit } from "../../middleware/rateLimit.js";
 import { groups } from "../groups/schema.js";
 import { healthChecks, monitors } from "./schema.js";
 import {
   freeHealthCheckSchema,
-  ReturnHealthCheck,
   ReturnMonitor,
   registerMonitorSchema,
   updateMonitorSchema,
@@ -385,56 +385,15 @@ router.post(
       throw new ApiError({ statusCode: 404, message: "Monitor not found" });
     }
 
-    // Use the per-monitor timeout that is now stored on the row.
-    const websiteCheckResult = await checkWebsite(monitor.url, {
-      timeoutMs: monitor.timeoutMs,
-    });
-    if (!websiteCheckResult) {
-      throw new ApiError({
-        statusCode: 500,
-        message: "Failed to check website",
-      });
-    }
-
-    const { status, statusCode, finalUrl, redirectCount, timings, error } =
-      websiteCheckResult;
-
-    const [healthCheck] = await withRetry(() =>
-      db
-        .insert(healthChecks)
-        .values({
-          monitorId: id,
-          status,
-          statusCode,
-          finalUrl,
-          redirectCount,
-          ttfbMs: timings.ttfbMs,
-          totalMs: timings.totalMs,
-          errorType: error?.type ?? null,
-          errorMessage: error?.message ?? null,
-        })
-        .returning(),
-    );
-
-    if (!healthCheck) {
-      throw new ApiError({
-        statusCode: 500,
-        message: "Failed to save health check",
-      });
-    }
-    const parsed = ReturnHealthCheck.safeParse(healthCheck);
-    if (!parsed.success) {
-      throw new ApiError({
-        statusCode: 500,
-        message: "Failed to parse health check",
-      });
-    }
+    // Fetch, persist and reschedule all happen in the shared runner, which
+    // the cron handler uses as well.
+    const healthCheck = await runMonitorCheck(monitor, { db });
 
     return c.json(
       new ApiResponse({
         statusCode: 200,
         message: "Health check completed",
-        data: parsed.data,
+        data: healthCheck,
       }),
     );
   },
