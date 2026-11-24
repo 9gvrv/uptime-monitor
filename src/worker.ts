@@ -25,8 +25,10 @@ export default {
     env: Bindings,
     ctx: ExecutionContext,
   ) {
+    // ScheduledController only exposes cron/scheduledTime/noRetry — there is
+    // no `colo`. Pass an optional REGION var through if you want to tag rows.
     ctx.waitUntil(
-      runScheduledChecks(env).catch((error) => {
+      runScheduledChecks(env, env.REGION).catch((error) => {
         logger.fatal(error, "Scheduled check run failed");
       }),
     );

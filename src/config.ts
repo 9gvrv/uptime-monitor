@@ -12,6 +12,9 @@ export type Bindings = {
   JWT_SECRET?: string;
   NODE_ENV?: string;
   LOG_LEVEL?: string;
+  // Optional tag for scheduled checks. ScheduledController has no `colo`,
+  // so set this var if you want cron-created health checks to carry a region.
+  REGION?: string;
   DEV_RATE_LIMITER: RateLimit;
   AUTH_RATE_LIMITER: RateLimit;
 };
